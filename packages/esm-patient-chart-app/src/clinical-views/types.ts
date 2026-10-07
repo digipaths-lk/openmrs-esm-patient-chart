@@ -147,6 +147,7 @@ export interface ColumnDefinition {
   id: string;
   title: string;
   isComplex?: boolean;
+  isColoredTag?: boolean;
   concept?: string;
   secondaryConcept?: string;
   multipleConcepts?: Array<string>;
@@ -167,6 +168,9 @@ export interface ColumnDefinition {
   encounterType: string;
   hasSummary?: boolean;
   summaryConcept?: SummaryConcept;
+  rendering?: string;
+  conditionCode?: string;
+  field?: string;
 }
 
 export interface ConditionalEncounterMapping {
@@ -238,6 +242,8 @@ export interface FormattedColumn {
 export interface EncounterTileColumn {
   key: string;
   header: string;
+  isColoredTag?: boolean;
+  statusColorMappings?: Record<string, string>;
   encounterTypeUuid: string;
   concept: string;
   title?: string;
@@ -251,11 +257,13 @@ export interface EncounterTileProps {
   patientUuid: string;
   columns: Array<EncounterTileColumn>;
   headerTitle: string;
+  maxColumnsPerRow?: number;
 }
 
 export interface MenuCardProps {
   tileHeader: string;
   columns: Array<ColumnDefinition>;
+  maxColumnsPerRow?: number;
 }
 
 interface SummaryConcept {

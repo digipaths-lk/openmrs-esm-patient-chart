@@ -23,6 +23,7 @@ const EncounterListTabsExtension: React.FC<EncounterListTabsComponentProps> = ({
   const { visitContext } = usePatientChartStore(patientUuid);
 
   const config = useConfig();
+
   const { tabDefinitions = [] } = config;
 
   const configConcepts = {

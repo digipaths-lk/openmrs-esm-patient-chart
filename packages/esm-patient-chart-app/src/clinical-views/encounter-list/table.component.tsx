@@ -42,16 +42,9 @@ export const EncounterListDataTable: React.FC<EncounterListDataTableProps> = ({ 
             <TableBody>
               {rows.map((row) => (
                 <TableRow key={row.id}>
-                  {row.cells.map((cell) => {
-                    const cellContent = cell.value?.content ?? cell.value;
-                    const isNumericObs =
-                      isValidElement(cellContent) && cellContent.type === NumericObservation;
-                    return (
-                      <TableCell key={cell.id} className={isNumericObs ? styles.numericObsCell : undefined}>
-                        {cellContent}
-                      </TableCell>
-                    );
-                  })}
+                  {row.cells.map((cell) => (
+                    <TableCell key={cell.id}>{cell.value?.content ?? cell.value}</TableCell>
+                  ))}
                 </TableRow>
               ))}
             </TableBody>

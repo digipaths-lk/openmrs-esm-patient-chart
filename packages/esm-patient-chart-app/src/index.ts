@@ -187,6 +187,11 @@ export const encounterListTableTabs = getAsyncLifecycle(
   { featureName: 'encounter-list-table-tabs', moduleName },
 );
 
+export const clinicalViewsNavGroup = getAsyncLifecycle(
+  () => import('./clinical-views/clinical-views-nav-group.component'),
+  { featureName: 'clinical-views-nav-group', moduleName },
+);
+
 export const visitContextSwitcherModal = getAsyncLifecycle(
   () => import('./visit/visits-widget/visit-context/visit-context-switcher.modal'),
   { featureName: 'visit-context-switcher', moduleName },

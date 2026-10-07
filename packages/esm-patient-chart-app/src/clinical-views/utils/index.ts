@@ -13,6 +13,8 @@ export const getEncounterTileColumns = (tileDefinition: MenuCardProps, config: C
     concept: column.concept,
     encounterTypeUuid: column.encounterType,
     hasSummary: column.hasSummary || false,
+    isColoredTag: column.isColoredTag || false,
+    statusColorMappings: column.statusColorMappings,
     summaryConcept: column.summaryConcept,
     getObsValue: (encounter: Encounter) => {
       let obsValue;
