@@ -26,6 +26,12 @@
   display: block;
 }
 
+.tileColumn {
+  min-width: 0;
+  max-width: 100%;
+  padding-right: layout.$spacing-06;
+}
+
 .tileBox {
   width: 25%;
   display: flex;
