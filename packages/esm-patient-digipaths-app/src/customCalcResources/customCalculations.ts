@@ -49,7 +49,6 @@ async function customCalculator(condition) {
   //   }
   // );
 
-   
   const conditionData = await getCondition(
     '7281e4a2-27c7-4844-a636-d2117886ceb3',
     '119481AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
@@ -455,18 +454,12 @@ async function calcSouthEastAsiaCVDRiskScore(
 ) {
   const chol = await cholPromise;
 
-  if (chol && chol.valueQuantity && chol.valueQuantity.value && chol.issued && !isOneYearAgo(chol.issued)) {
-    return await calcSouthEastAsiaLabCVDRiskScore(
-      patientId,
-      sex,
-      smoker,
-      age,
-      sbpPromise,
-      chol.valueQuantity.value,
-      diabetes,
-    );
-  } else return 0;
-
+  // if (chol && chol.valueQuantity && chol.valueQuantity.value && chol.issued && !isOneYearAgo(chol.issued)) {
+  if (chol) {
+    return await calcSouthEastAsiaLabCVDRiskScore(patientId, sex, smoker, age, sbpPromise, chol, diabetes);
+  } else {
+    return 0;
+  }
   // else return await calcSouthEastAsiaNonLabCVDRiskScore(sex, smoker, age, sbpPromise, bmiPromise);
 }
 
