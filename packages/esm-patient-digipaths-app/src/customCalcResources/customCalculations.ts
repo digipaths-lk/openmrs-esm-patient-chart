@@ -1,4 +1,4 @@
-import { getCondition } from './data.resource';
+import { getCondition, getObs } from './data.resource';
 import data from './who-south-asia-cvd.json';
 import { southEastAsiaCvdRiskTables, southEastAsiaCvdRiskTablesLaboratory } from './risk-dataset-table';
 import { conceptCodes } from './concept-codes';
@@ -20,19 +20,46 @@ async function calcHtnGrade(systolic, diastolic) {
   else return conceptCodes['Normotension'];
 }
 
-async function calcBpControl(age, systolic, diastolic) {
+async function calcBpControl(age, systolic, diastolic, patientId) {
   let sbp = await systolic;
   let dbp = await diastolic;
   let isControlSBP: boolean;
   let isControlDBP: boolean;
 
-  if (age < 65) {
-    isControlSBP = sbp >= 60 && sbp <= 129;
-    isControlDBP = dbp >= 40 && dbp <= 89;
-  } else {
-    isControlSBP = sbp >= 100 && sbp <= 139;
-    isControlDBP = dbp >= 70 && dbp <= 89;
+  const bptarget = await calcBpTarget(patientId, age);
+
+  switch (bptarget) {
+    case conceptCodes['SBPlt130mmHgAndDBPlt80mmHg']:
+      isControlSBP = sbp < 130;
+      isControlDBP = dbp < 80;
+      break;
+    case conceptCodes['SBPlt140mmHgAndDBPlt80mmHg']:
+      isControlSBP = sbp < 140;
+      isControlDBP = dbp < 80;
+      break;
+    case conceptCodes['SBPlte130mmHgAndDBPlt80mmHg']:
+      isControlSBP = sbp <= 130;
+      isControlDBP = dbp < 80;
+      break;
+    case conceptCodes['SBPlte140mmHgAndDBPlt80mmHg']:
+      isControlSBP = sbp <= 140;
+      isControlDBP = dbp < 80;
+      break;
+    case conceptCodes['SBP130mmHgAndDBP80mmHg']:
+      isControlSBP = sbp === 130;
+      isControlDBP = dbp === 80;
+      break;
+    default:
+      break;
   }
+
+  // if (age < 65) {
+  //   isControlSBP = sbp >= 60 && sbp <= 129;
+  //   isControlDBP = dbp >= 40 && dbp <= 89;
+  // } else {
+  //   isControlSBP = sbp >= 100 && sbp <= 139;
+  //   isControlDBP = dbp >= 70 && dbp <= 89;
+  // }
 
   return isControlSBP && isControlDBP ? conceptCodes['BloodPressureControl'] : conceptCodes['PoorHypertensionControl'];
 }
@@ -49,7 +76,6 @@ async function customCalculator(condition) {
   //   }
   // );
 
-   
   const conditionData = await getCondition(
     '7281e4a2-27c7-4844-a636-d2117886ceb3',
     '119481AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
@@ -373,7 +399,6 @@ async function calcCVDRiskCategory(
   sbpPromise?,
   cholPromise?,
   bmiPromise?,
-  diabetes?: boolean,
 ) {
   const riskScore = await calcSouthEastAsiaCVDRiskScore(
     patientId,
@@ -383,7 +408,6 @@ async function calcCVDRiskCategory(
     sbpPromise,
     cholPromise,
     bmiPromise,
-    diabetes,
   );
 
   if (riskScore < 5) return '7d5a45c0-eb6b-508a-a1b7-185637ebdb0b';
@@ -404,10 +428,12 @@ async function calcSouthEastAsiaLabCVDRiskScore(
   age?: number,
   sbpPromise?,
   cholPromise?,
-  diabetes?: boolean,
 ) {
+  const conditionData = await getCondition(patientId, '119481AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
   const chol = await cholPromise;
   const sbp = await sbpPromise;
+
+  let isActiveDiabetes = conditionData && conditionData.total > 0;
 
   const hasValidValues =
     typeof sex === 'string' &&
@@ -419,10 +445,15 @@ async function calcSouthEastAsiaLabCVDRiskScore(
   if (!hasValidValues) {
     return 0;
   }
+  //
+  // // Bin functions
+  // const getAgeBin = (age) => Math.floor((Math.min(Math.max(40, age), 74) - 40) / 5);
+  // const getSbpBin = (sbp) => Math.max(0, Math.min(4, 4 - Math.floor((Math.min(sbp, 180) - 120) / 20)));
+  // const getCholBin = (chol) => Math.max(0, Math.min(4, Math.floor(chol - 3)));
 
   const sexIdx = sex === 'M' ? 0 : 1;
   const smokerIdx = smoker ? 1 : 0;
-  const diabetesIdx = diabetes ? 1 : 0;
+  const diabetesIdx = isActiveDiabetes ? 1 : 0;
   const ageIdx = getAgeIndex(age);
   const sbpIdx = getSBPIndex(sbp);
   const cholIdx = getCholIndex(chol);
@@ -437,9 +468,8 @@ async function calcSouthEastAsiaLabCVDRisk(
   age?: number,
   sbpPromise?,
   cholPromise?,
-  diabetes?: boolean,
 ) {
-  const risk = await calcSouthEastAsiaLabCVDRiskScore(patientId, sex, smoker, age, sbpPromise, cholPromise, diabetes);
+  const risk = await calcSouthEastAsiaLabCVDRiskScore(patientId, sex, smoker, age, sbpPromise, cholPromise);
   return risk + '%';
 }
 
@@ -451,21 +481,17 @@ async function calcSouthEastAsiaCVDRiskScore(
   sbpPromise?,
   cholPromise?,
   bmiPromise?,
-  diabetes?: boolean,
 ) {
   const chol = await cholPromise;
 
-  if (chol && chol.valueQuantity && chol.valueQuantity.value && chol.issued && !isOneYearAgo(chol.issued)) {
-    return await calcSouthEastAsiaLabCVDRiskScore(
-      patientId,
-      sex,
-      smoker,
-      age,
-      sbpPromise,
-      chol.valueQuantity.value,
-      diabetes,
-    );
-  } else return 0;
+  const cholValue =
+    chol && chol.valueQuantity && chol.valueQuantity.value && chol.issued && !isOneYearAgo(chol.issued)
+      ? chol.valueQuantity.value
+      : 193.35;
+
+  // if (chol && chol.valueQuantity && chol.valueQuantity.value && chol.issued && !isOneYearAgo(chol.issued)) {
+  return await calcSouthEastAsiaLabCVDRiskScore(patientId, sex, smoker, age, sbpPromise, cholValue);
+  // } else return 0;
 
   // else return await calcSouthEastAsiaNonLabCVDRiskScore(sex, smoker, age, sbpPromise, bmiPromise);
 }
@@ -478,18 +504,8 @@ async function calcSouthEastAsiaCVDRisk(
   sbpPromise?,
   cholPromise?,
   bmiPromise?,
-  diabetes?: boolean,
 ) {
-  const risk = await calcSouthEastAsiaCVDRiskScore(
-    patientId,
-    sex,
-    smoker,
-    age,
-    sbpPromise,
-    cholPromise,
-    bmiPromise,
-    diabetes,
-  );
+  const risk = await calcSouthEastAsiaCVDRiskScore(patientId, sex, smoker, age, sbpPromise, cholPromise, bmiPromise);
   return risk + '%';
 }
 
@@ -556,14 +572,78 @@ const calcPatientConditions = async (patientId: string, conditionIdList) => {
   const activeConditionList = [];
   for (const conditionId of conditionIdList) {
     const conditionData = await getCondition(patientId, conditionId);
-    if (conditionData && conditionData.total > 0) activeConditionList.push(conditionId);
+    if (
+      (conditionData && conditionData.total > 0) ||
+      (conditionId === conceptCodes['hypertension'] && (await detectHypertension(patientId)))
+    )
+      activeConditionList.push(conditionId);
   }
   return activeConditionList;
+};
+
+const detectHypertension = async (patientId) => {
+  const sbpList = await getObs(patientId, conceptCodes['systolicBloodPressure']);
+  const dbpList = await getObs(patientId, conceptCodes['diastolicBloodPressure']);
+
+  if (sbpList && sbpList.entry && sbpList.entry.length >= 2 && dbpList && dbpList.entry && dbpList.entry.length >= 2) {
+    const sbp1 =
+      sbpList.entry[0] && sbpList.entry[0].resource && sbpList.entry[0].resource.valueQuantity
+        ? sbpList.entry[0].resource.valueQuantity.value
+        : null;
+
+    const sbp2 =
+      sbpList.entry[1] && sbpList.entry[1].resource && sbpList.entry[1].resource.valueQuantity
+        ? sbpList.entry[1].resource.valueQuantity.value
+        : null;
+
+    const dbp1 =
+      dbpList.entry[0] && dbpList.entry[0].resource && dbpList.entry[0].resource.valueQuantity
+        ? dbpList.entry[0].resource.valueQuantity.value
+        : null;
+
+    const dbp2 =
+      dbpList.entry[1] && dbpList.entry[1].resource && dbpList.entry[1].resource.valueQuantity
+        ? dbpList.entry[1].resource.valueQuantity.value
+        : null;
+
+    return sbp1 > 140 && sbp2 > 140 && dbp1 > 90 && dbp2 > 90;
+  }
+  return false;
+};
+
+const hasActiveCondition = async (patientId, conditionUuid) => {
+  const conditionData = await getCondition(patientId, conditionUuid);
+  return conditionData && conditionData.total > 0 ? 1 : 0;
+};
+
+const calcBpTarget = async (patientId: string, age: any) => {
+  console.log('Yes here', patientId, age);
+
+  if (await hasActiveCondition(patientId, conceptCodes['diabetesWithProteinuria'])) {
+    console.log('Yes 11111');
+    return conceptCodes['SBPlt130mmHgAndDBPlt80mmHg'];
+  } else if (await hasActiveCondition(patientId, conceptCodes['coronaryHeartDisease'])) {
+    console.log('Yes 22222');
+    return age < 65 ? conceptCodes['SBPlte130mmHgAndDBPlt80mmHg'] : conceptCodes['SBPlte140mmHgAndDBPlt80mmHg'];
+  } else if (await hasActiveCondition(patientId, conceptCodes['chronicKidneyDisease'])) {
+    console.log('Yes 333');
+    return conceptCodes['SBPlt130mmHgAndDBPlt80mmHg'];
+  } else if (await hasActiveCondition(patientId, conceptCodes['cerebrovascularDisease'])) {
+    console.log('Yes 44444');
+    return conceptCodes['SBPlt130mmHgAndDBPlt80mmHg'];
+  } else if (await hasActiveCondition(patientId, conceptCodes['diabetesMellitus'])) {
+    console.log('Yes 55555');
+    return age < 65 ? conceptCodes['SBPlt130mmHgAndDBPlt80mmHg'] : conceptCodes['SBPlt140mmHgAndDBPlt80mmHg'];
+  } else if (age >= 18) {
+    console.log('Yes 66666');
+    return age < 65 ? conceptCodes['SBPlt130mmHgAndDBPlt80mmHg'] : conceptCodes['SBPlt140mmHgAndDBPlt80mmHg'];
+  }
 };
 
 export {
   calcHtnGrade,
   calcBpControl,
+  calcBpTarget,
   customCalculator,
   calcSouthEastAsiaNonLabCVDRisk2,
   calcFootCare,
