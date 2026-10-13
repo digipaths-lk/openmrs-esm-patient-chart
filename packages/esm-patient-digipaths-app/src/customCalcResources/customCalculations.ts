@@ -15,8 +15,8 @@ async function calcHtnGrade(systolic, diastolic) {
   if (sbp >= 180 || dbp >= 110) return conceptCodes['Severe'];
   else if (sbp >= 160 || dbp >= 100) return conceptCodes['Moderate'];
   else if (sbp >= 140 || dbp >= 90) return conceptCodes['Mild'];
-  else if (sbp >= 120 || dbp >= 81) return conceptCodes['PreHypertension'];
-  if (sbp < 60 || dbp < 40) return conceptCodes['LowBP'];
+  else if (sbp >= 121 || dbp >= 81) return conceptCodes['PreHypertension'];
+  if (sbp <= 60 || dbp <= 40) return conceptCodes['LowBP'];
   else return conceptCodes['Normotension'];
 }
 
@@ -429,10 +429,9 @@ async function calcSouthEastAsiaLabCVDRiskScore(
   smoker?: boolean,
   age?: number,
   sbpPromise?,
-  cholPromise?,
+  chol?,
   diabetes?: boolean,
 ) {
-  const chol = await cholPromise;
   const sbp = await sbpPromise;
 
   const hasValidValues =
@@ -481,10 +480,10 @@ async function calcSouthEastAsiaCVDRiskScore(
 ) {
   const chol = await cholPromise;
 
-  const cholValue =
-    chol && chol.valueQuantity && chol.valueQuantity.value && chol.issued && !isOneYearAgo(chol.issued)
-      ? chol.valueQuantity.value
-      : 193.35;
+  const cholValue = chol > 0 ? chol : 193.35;
+  //   chol && chol.valueQuantity && chol.valueQuantity.value && chol.issued && !isOneYearAgo(chol.issued)
+  //     ? chol.valueQuantity.value
+  //     : 193.35;
 
   // if (chol && chol.valueQuantity && chol.valueQuantity.value && chol.issued && !isOneYearAgo(chol.issued)) {
   return await calcSouthEastAsiaLabCVDRiskScore(patientId, sex, smoker, age, sbpPromise, cholValue, diabetes);
