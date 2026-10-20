@@ -1,22 +1,16 @@
-@use '@carbon/layout';
+.container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
 
-.backButton {
-  padding: layout.$spacing-03;
+.tabPanelsWrapper {
+  :global(.cds--tab-panels) {
+    padding: 0;
+  }
 
-  button {
-    display: flex;
-    margin-left: -(layout.$spacing-03);
-
-    svg {
-      order: 1;
-      margin-right: layout.$spacing-03;
-      margin-left: 0 !important;
-      fill: currentColor !important;
-    }
-
-    span {
-      order: 2;
-    }
+  :global(.cds--tab-content) {
+    padding: 0;
   }
 }
 

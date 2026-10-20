@@ -1,7 +1,8 @@
 {
   "$schema": "https://json.openmrs.org/routes.schema.json",
   "backendDependencies": {
-    "webservices.rest": ">=2.2.0"
+    "fhir2": ">=2.7.0",
+    "webservices.rest": ">=2.37.0"
   },
   "extensions": [
     {
@@ -31,7 +32,7 @@
       "slot": "patient-chart-dashboard-slot",
       "meta": {
         "slot": "patient-chart-immunizations-dashboard-slot",
-        "path": "Immunizations"
+        "path": "immunizations"
       },
       "order": 8
     }

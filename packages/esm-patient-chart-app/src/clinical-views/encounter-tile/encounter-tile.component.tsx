@@ -102,13 +102,12 @@ const EncounterData: React.FC<{
                   <span
                     style={{
                       display: 'inline-block',
-                      padding: '2px 10px',
+                      padding: '4px 8px',
                       borderRadius: '12px',
                       fontSize: '0.75rem',
                       fontWeight: 500,
                       backgroundColor: bgColor,
                       color: colorValue,
-                      whiteSpace: 'nowrap',
                     }}
                   >
                     {obsValue}

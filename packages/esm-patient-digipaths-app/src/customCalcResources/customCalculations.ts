@@ -15,8 +15,8 @@ async function calcHtnGrade(systolic, diastolic) {
   if (sbp >= 180 || dbp >= 110) return conceptCodes['Severe'];
   else if (sbp >= 160 || dbp >= 100) return conceptCodes['Moderate'];
   else if (sbp >= 140 || dbp >= 90) return conceptCodes['Mild'];
-  else if (sbp >= 120 || dbp >= 81) return conceptCodes['PreHypertension'];
-  if (sbp < 60 || dbp < 40) return conceptCodes['LowBP'];
+  else if (sbp >= 121 || dbp >= 81) return conceptCodes['PreHypertension'];
+  if (sbp <= 60 || dbp <= 40) return conceptCodes['LowBP'];
   else return conceptCodes['Normotension'];
 }
 
@@ -76,7 +76,6 @@ async function customCalculator(condition) {
   //   }
   // );
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const conditionData = await getCondition(
     '7281e4a2-27c7-4844-a636-d2117886ceb3',
     '119481AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
@@ -400,6 +399,7 @@ async function calcCVDRiskCategory(
   sbpPromise?,
   cholPromise?,
   bmiPromise?,
+  diabetes?: boolean,
 ) {
   const riskScore = await calcSouthEastAsiaCVDRiskScore(
     patientId,
@@ -409,6 +409,7 @@ async function calcCVDRiskCategory(
     sbpPromise,
     cholPromise,
     bmiPromise,
+    diabetes,
   );
 
   if (riskScore < 5) return '7d5a45c0-eb6b-508a-a1b7-185637ebdb0b';
@@ -428,13 +429,10 @@ async function calcSouthEastAsiaLabCVDRiskScore(
   smoker?: boolean,
   age?: number,
   sbpPromise?,
-  cholPromise?,
+  chol?,
+  diabetes?: boolean,
 ) {
-  const conditionData = await getCondition(patientId, '119481AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
-  const chol = await cholPromise;
   const sbp = await sbpPromise;
-
-  let isActiveDiabetes = conditionData && conditionData.total > 0;
 
   const hasValidValues =
     typeof sex === 'string' &&
@@ -446,15 +444,10 @@ async function calcSouthEastAsiaLabCVDRiskScore(
   if (!hasValidValues) {
     return 0;
   }
-  //
-  // // Bin functions
-  // const getAgeBin = (age) => Math.floor((Math.min(Math.max(40, age), 74) - 40) / 5);
-  // const getSbpBin = (sbp) => Math.max(0, Math.min(4, 4 - Math.floor((Math.min(sbp, 180) - 120) / 20)));
-  // const getCholBin = (chol) => Math.max(0, Math.min(4, Math.floor(chol - 3)));
 
   const sexIdx = sex === 'M' ? 0 : 1;
   const smokerIdx = smoker ? 1 : 0;
-  const diabetesIdx = isActiveDiabetes ? 1 : 0;
+  const diabetesIdx = diabetes ? 1 : 0;
   const ageIdx = getAgeIndex(age);
   const sbpIdx = getSBPIndex(sbp);
   const cholIdx = getCholIndex(chol);
@@ -469,8 +462,9 @@ async function calcSouthEastAsiaLabCVDRisk(
   age?: number,
   sbpPromise?,
   cholPromise?,
+  diabetes?: boolean,
 ) {
-  const risk = await calcSouthEastAsiaLabCVDRiskScore(patientId, sex, smoker, age, sbpPromise, cholPromise);
+  const risk = await calcSouthEastAsiaLabCVDRiskScore(patientId, sex, smoker, age, sbpPromise, cholPromise, diabetes);
   return risk + '%';
 }
 
@@ -482,16 +476,17 @@ async function calcSouthEastAsiaCVDRiskScore(
   sbpPromise?,
   cholPromise?,
   bmiPromise?,
+  diabetes?: boolean,
 ) {
   const chol = await cholPromise;
 
-  const cholValue =
-    chol && chol.valueQuantity && chol.valueQuantity.value && chol.issued && !isOneYearAgo(chol.issued)
-      ? chol.valueQuantity.value
-      : 193.35;
+  const cholValue = chol > 0 ? chol : 193.35;
+  //   chol && chol.valueQuantity && chol.valueQuantity.value && chol.issued && !isOneYearAgo(chol.issued)
+  //     ? chol.valueQuantity.value
+  //     : 193.35;
 
   // if (chol && chol.valueQuantity && chol.valueQuantity.value && chol.issued && !isOneYearAgo(chol.issued)) {
-  return await calcSouthEastAsiaLabCVDRiskScore(patientId, sex, smoker, age, sbpPromise, cholValue);
+  return await calcSouthEastAsiaLabCVDRiskScore(patientId, sex, smoker, age, sbpPromise, cholValue, diabetes);
   // } else return 0;
 
   // else return await calcSouthEastAsiaNonLabCVDRiskScore(sex, smoker, age, sbpPromise, bmiPromise);
@@ -505,8 +500,18 @@ async function calcSouthEastAsiaCVDRisk(
   sbpPromise?,
   cholPromise?,
   bmiPromise?,
+  diabetes?: boolean,
 ) {
-  const risk = await calcSouthEastAsiaCVDRiskScore(patientId, sex, smoker, age, sbpPromise, cholPromise, bmiPromise);
+  const risk = await calcSouthEastAsiaCVDRiskScore(
+    patientId,
+    sex,
+    smoker,
+    age,
+    sbpPromise,
+    cholPromise,
+    bmiPromise,
+    diabetes,
+  );
   return risk + '%';
 }
 
@@ -618,25 +623,17 @@ const hasActiveCondition = async (patientId, conditionUuid) => {
 };
 
 const calcBpTarget = async (patientId: string, age: any) => {
-  console.log('Yes here', patientId, age);
-
   if (await hasActiveCondition(patientId, conceptCodes['diabetesWithProteinuria'])) {
-    console.log('Yes 11111');
     return conceptCodes['SBPlt130mmHgAndDBPlt80mmHg'];
   } else if (await hasActiveCondition(patientId, conceptCodes['coronaryHeartDisease'])) {
-    console.log('Yes 22222');
     return age < 65 ? conceptCodes['SBPlte130mmHgAndDBPlt80mmHg'] : conceptCodes['SBPlte140mmHgAndDBPlt80mmHg'];
   } else if (await hasActiveCondition(patientId, conceptCodes['chronicKidneyDisease'])) {
-    console.log('Yes 333');
     return conceptCodes['SBPlt130mmHgAndDBPlt80mmHg'];
   } else if (await hasActiveCondition(patientId, conceptCodes['cerebrovascularDisease'])) {
-    console.log('Yes 44444');
     return conceptCodes['SBPlt130mmHgAndDBPlt80mmHg'];
   } else if (await hasActiveCondition(patientId, conceptCodes['diabetesMellitus'])) {
-    console.log('Yes 55555');
     return age < 65 ? conceptCodes['SBPlt130mmHgAndDBPlt80mmHg'] : conceptCodes['SBPlt140mmHgAndDBPlt80mmHg'];
   } else if (age >= 18) {
-    console.log('Yes 66666');
     return age < 65 ? conceptCodes['SBPlt130mmHgAndDBPlt80mmHg'] : conceptCodes['SBPlt140mmHgAndDBPlt80mmHg'];
   }
 };

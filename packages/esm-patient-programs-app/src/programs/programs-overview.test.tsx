@@ -1,4 +1,5 @@
 import React from 'react';
+import { vi, describe, it, expect, type Mock } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { screen, within } from '@testing-library/react';
 import { launchWorkspace2, openmrsFetch } from '@openmrs/esm-framework';
@@ -7,8 +8,8 @@ import { mockCareProgramsResponse, mockEnrolledInAllProgramsResponse, mockEnroll
 import { mockPatient, renderWithSwr, waitForLoadingToFinish } from 'tools';
 import ProgramsOverview from './programs-overview.component';
 
-const mockOpenmrsFetch = openmrsFetch as jest.Mock;
-const mockLaunchWorkspace = jest.mocked(launchWorkspace2);
+const mockOpenmrsFetch = openmrsFetch as Mock;
+const mockLaunchWorkspace = vi.mocked(launchWorkspace2);
 
 const testProps = {
   basePath: `/patient/${mockPatient.id}/chart`,
@@ -70,7 +71,7 @@ describe('ProgramsOverview', () => {
     expect(previousPageButton).toBeDisabled();
     const row = screen.getByRole('row', { name: /HIV Care and Treatment/i });
     expect(row).toBeInTheDocument();
-    const actionMenuButton = within(row).getByRole('button', { name: /options$/i });
+    const actionMenuButton = within(row).getByRole('button', { name: /edit or delete program/i });
     expect(actionMenuButton).toBeInTheDocument();
 
     expect(addButton).toBeEnabled();

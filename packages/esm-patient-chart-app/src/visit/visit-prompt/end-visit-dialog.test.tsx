@@ -41,6 +41,22 @@ mockUsePatientChartStore.mockReturnValue({
   setVisitContext: mockSetVisitContext,
 });
 
+const mockUsePatientChartStore = jest.mocked(usePatientChartStore);
+const mockSetVisitContext = jest.fn();
+
+jest.mock('@openmrs/esm-patient-common-lib', () => ({
+  usePatientChartStore: jest.fn(),
+}));
+
+mockUsePatientChartStore.mockReturnValue({
+  patientUuid: 'patient-123',
+  patient: null,
+  visitContext: mockCurrentVisit,
+  mutateVisitContext: jest.fn(),
+  setPatient: jest.fn(),
+  setVisitContext: mockSetVisitContext,
+});
+
 describe('End visit dialog', () => {
   beforeEach(() => {
     mockUseVisit.mockReturnValue({

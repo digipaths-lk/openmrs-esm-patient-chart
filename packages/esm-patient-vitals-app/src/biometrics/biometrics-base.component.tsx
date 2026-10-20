@@ -1,6 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, ContentSwitcher, DataTableSkeleton, IconSwitch, InlineLoading } from '@carbon/react';
+import {
+  Button,
+  ContentSwitcher,
+  DataTableSkeleton,
+  IconSwitch,
+  InlineLoading,
+  SkeletonPlaceholder,
+} from '@carbon/react';
 import { Add, Analytics, Table } from '@carbon/react/icons';
 import { formatDatetime, parseDate, useConfig, useLayoutType } from '@openmrs/esm-framework';
 import { CardHeader, EmptyState, ErrorState } from '@openmrs/esm-patient-common-lib';
@@ -9,9 +16,16 @@ import { useConceptUnits, useVitalsAndBiometrics, withUnit } from '../common';
 import { shouldShowBmi } from '../common/helpers';
 import { type ConfigObject } from '../config-schema';
 import type { BiometricsTableHeader, BiometricsTableRow } from './types';
-import BiometricsChart from './biometrics-chart.component';
 import PaginatedBiometrics from './paginated-biometrics.component';
 import styles from './biometrics-base.scss';
+
+const loadBiometricsChart = () => import('./biometrics-chart.component');
+const BiometricsChart = lazy(loadBiometricsChart);
+
+// A failed prefetch is ignored. Opening the chart view retries the import through React.lazy.
+const prefetchBiometricsChart = () => {
+  loadBiometricsChart().catch(() => {});
+};
 
 interface BiometricsBaseProps {
   pageSize: number;
@@ -44,12 +58,14 @@ const BiometricsBase: React.FC<BiometricsBaseProps> = ({ patientUuid, patient, p
     },
     {
       key: 'weightRender',
+      conceptUuid: config.concepts.weightUuid,
       header: withUnit(t('weight', 'Weight'), conceptUnits.get(config.concepts.weightUuid) ?? ''),
       isSortable: true,
       sortFunc: (valueA, valueB) => (valueA.weight && valueB.weight ? valueA.weight - valueB.weight : 0),
     },
     {
       key: 'heightRender',
+      conceptUuid: config.concepts.heightUuid,
       header: withUnit(t('height', 'Height'), conceptUnits.get(config.concepts.heightUuid) ?? ''),
       isSortable: true,
       sortFunc: (valueA, valueB) => (valueA.height && valueB.height ? valueA.height - valueB.height : 0),
@@ -58,6 +74,7 @@ const BiometricsBase: React.FC<BiometricsBaseProps> = ({ patientUuid, patient, p
       ? [
           {
             key: 'bmiRender' as const,
+            conceptUuid: config.concepts.bodyMassIndexUuid,
             header: `${t('bmi', 'BMI')} (${bmiUnit})`,
             isSortable: true,
             sortFunc: (valueA, valueB) => (valueA.bmi && valueB.bmi ? valueA.bmi - valueB.bmi : 0),
@@ -66,6 +83,7 @@ const BiometricsBase: React.FC<BiometricsBaseProps> = ({ patientUuid, patient, p
       : []),
     {
       key: 'muacRender',
+      conceptUuid: config.concepts.midUpperArmCircumferenceUuid,
       header: withUnit(t('muac', 'MUAC'), conceptUnits.get(config.concepts.midUpperArmCircumferenceUuid) ?? ''),
       isSortable: true,
       sortFunc: (valueA, valueB) => (valueA.muac && valueB.muac ? valueA.muac - valueB.muac : 0),
@@ -105,6 +123,8 @@ const BiometricsBase: React.FC<BiometricsBaseProps> = ({ patientUuid, patient, p
           <div className={styles.biometricsHeaderActionItems}>
             <ContentSwitcher
               onChange={(evt) => setChartView(evt.name === 'chartView')}
+              onFocus={prefetchBiometricsChart}
+              onMouseEnter={prefetchBiometricsChart}
               size={isTablet ? 'md' : 'sm'}
               selectedIndex={chartView ? 1 : 0}
             >
@@ -129,12 +149,22 @@ const BiometricsBase: React.FC<BiometricsBaseProps> = ({ patientUuid, patient, p
           </div>
         </CardHeader>
         {chartView ? (
-          <BiometricsChart
-            patientBiometrics={biometrics}
-            conceptUnits={conceptUnits}
-            config={config}
-            showBmi={showBmi}
-          />
+          <Suspense
+            fallback={
+              <SkeletonPlaceholder
+                className={styles.chartSkeleton}
+                role="progressbar"
+                aria-label={t('loading', 'Loading')}
+              />
+            }
+          >
+            <BiometricsChart
+              patientBiometrics={biometrics}
+              conceptUnits={conceptUnits}
+              config={config}
+              showBmi={showBmi}
+            />
+          </Suspense>
         ) : (
           <PaginatedBiometrics
             tableRows={tableRows}
@@ -143,6 +173,7 @@ const BiometricsBase: React.FC<BiometricsBaseProps> = ({ patientUuid, patient, p
             pageUrl={pageUrl}
             tableHeaders={tableHeaders}
             patient={patient}
+            patientUuid={patientUuid}
           />
         )}
       </div>

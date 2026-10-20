@@ -1,4 +1,5 @@
 import React from 'react';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
@@ -16,31 +17,31 @@ import { configSchemaHorizontal } from '../config-schema-obs-horizontal';
 import { updateObservation, createObservationInEncounter, createEncounter } from './obs-table-horizontal.resource';
 import { useEncounterTypes } from '../resources/useEncounterTypes';
 
-jest.mock('../resources/useObs', () => ({
-  useObs: jest.fn(),
+vi.mock('../resources/useObs', () => ({
+  useObs: vi.fn(),
 }));
 
-jest.mock('../resources/useEncounterTypes', () => ({
-  useEncounterTypes: jest.fn(),
+vi.mock('../resources/useEncounterTypes', () => ({
+  useEncounterTypes: vi.fn(),
 }));
 
-jest.mock('./obs-table-horizontal.resource', () => ({
-  updateObservation: jest.fn(),
-  createObservationInEncounter: jest.fn(),
-  createEncounter: jest.fn(),
+vi.mock('./obs-table-horizontal.resource', () => ({
+  updateObservation: vi.fn(),
+  createObservationInEncounter: vi.fn(),
+  createEncounter: vi.fn(),
 }));
 
-const mockUseObs = jest.mocked(useObs);
-const mockUseConfig = jest.mocked(useConfig);
-const mockShowSnackbar = jest.mocked(showSnackbar);
-const mockUpdateObservation = jest.mocked(updateObservation);
-const mockCreateObservationInEncounter = jest.mocked(createObservationInEncounter);
-const mockCreateEncounter = jest.mocked(createEncounter);
-const mockUseLayoutType = jest.mocked(useLayoutType);
-const mockIsDesktop = jest.mocked(isDesktop);
-const mockUseSession = jest.mocked(useSession);
-const mockUseEncounterTypes = jest.mocked(useEncounterTypes);
-const mockUserHasAccess = jest.mocked(userHasAccess);
+const mockUseObs = vi.mocked(useObs);
+const mockUseConfig = vi.mocked(useConfig);
+const mockShowSnackbar = vi.mocked(showSnackbar);
+const mockUpdateObservation = vi.mocked(updateObservation);
+const mockCreateObservationInEncounter = vi.mocked(createObservationInEncounter);
+const mockCreateEncounter = vi.mocked(createEncounter);
+const mockUseLayoutType = vi.mocked(useLayoutType);
+const mockIsDesktop = vi.mocked(isDesktop);
+const mockUseSession = vi.mocked(useSession);
+const mockUseEncounterTypes = vi.mocked(useEncounterTypes);
+const mockUserHasAccess = vi.mocked(userHasAccess);
 
 const mockObsData = [
   {
@@ -124,7 +125,7 @@ const mockEncounters = [
 
 describe('ObsTableHorizontal', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockUseLayoutType.mockReturnValue('small-desktop');
     mockIsDesktop.mockReturnValue(true);
     mockUseEncounterTypes.mockReturnValue({
@@ -141,7 +142,7 @@ describe('ObsTableHorizontal', () => {
       error: null,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
     mockUserHasAccess.mockReturnValue(true);
   });
@@ -152,7 +153,7 @@ describe('ObsTableHorizontal', () => {
       error: null,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
     mockUseConfig.mockReturnValue({
       ...(getDefaultsFromConfigSchema(configSchemaHorizontal) as object),
@@ -171,11 +172,42 @@ describe('ObsTableHorizontal', () => {
     expect(screen.getByText('182')).toBeInTheDocument();
     expect(screen.getByText('72')).toBeInTheDocument();
   });
+
+  it('honors decimalPlaces: 0 for fractional values', () => {
+    const observations = [
+      {
+        id: 'obs-frac',
+        code: { text: 'Height', coding: [{ code: '5090AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' }] },
+        conceptUuid: '5090AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        dataType: 'Numeric',
+        effectiveDateTime: '2021-02-01T00:00:00Z',
+        valueQuantity: { value: 182.4 },
+        encounter: { reference: 'Encounter/234', name: 'Outpatient' },
+      },
+    ] as Array<ObsResult>;
+    mockUseObs.mockReturnValue({
+      data: { observations, concepts: mockConceptData, encounters: [mockEncounters[1]] },
+      error: null,
+      isLoading: false,
+      isValidating: false,
+      mutate: vi.fn(),
+    });
+    mockUseConfig.mockReturnValue({
+      ...(getDefaultsFromConfigSchema(configSchemaHorizontal) as object),
+      title: 'Vitals',
+      editable: false,
+      data: [{ concept: '5090AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', label: 'Height', decimalPlaces: 0 }],
+    });
+
+    render(<ObsTableHorizontal patientUuid="patient-123" />);
+
+    expect(screen.getByText('182')).toBeInTheDocument();
+  });
 });
 
 describe('ObsTableHorizontal editable mode', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockUseLayoutType.mockReturnValue('small-desktop');
     mockIsDesktop.mockReturnValue(true);
     mockUseSession.mockReturnValue({
@@ -196,7 +228,7 @@ describe('ObsTableHorizontal editable mode', () => {
       error: null,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
     mockUpdateObservation.mockResolvedValue({ data: {} } as any);
     mockCreateObservationInEncounter.mockResolvedValue({ data: {} } as any);
@@ -205,7 +237,7 @@ describe('ObsTableHorizontal editable mode', () => {
 
   it('should show edit button on hover when editable is true', async () => {
     const user = userEvent.setup();
-    const mockMutate = jest.fn().mockResolvedValue(undefined);
+    const mockMutate = vi.fn().mockResolvedValue(undefined);
 
     mockUseObs.mockReturnValue({
       data: { observations: mockObsData, concepts: mockConceptData, encounters: mockEncounters },
@@ -242,7 +274,7 @@ describe('ObsTableHorizontal editable mode', () => {
       error: null,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
     mockUseConfig.mockReturnValue({
       ...(getDefaultsFromConfigSchema(configSchemaHorizontal) as object),
@@ -268,7 +300,7 @@ describe('ObsTableHorizontal editable mode', () => {
       error: null,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
     mockUseConfig.mockReturnValue({
       ...(getDefaultsFromConfigSchema(configSchemaHorizontal) as object),
@@ -282,7 +314,7 @@ describe('ObsTableHorizontal editable mode', () => {
 
   it('should open input field when edit button is clicked', async () => {
     const user = userEvent.setup();
-    const mockMutate = jest.fn().mockResolvedValue(undefined);
+    const mockMutate = vi.fn().mockResolvedValue(undefined);
 
     mockUseObs.mockReturnValue({
       data: { observations: mockObsData, concepts: mockConceptData, encounters: mockEncounters },
@@ -317,7 +349,7 @@ describe('ObsTableHorizontal editable mode', () => {
 
   it('should update existing observation when value is changed and saved', async () => {
     const user = userEvent.setup();
-    const mockMutate = jest.fn().mockResolvedValue(undefined);
+    const mockMutate = vi.fn().mockResolvedValue(undefined);
 
     mockUseObs.mockReturnValue({
       data: { observations: mockObsData, concepts: mockConceptData, encounters: mockEncounters },
@@ -368,7 +400,7 @@ describe('ObsTableHorizontal editable mode', () => {
 
   it('should create new observation when editing empty cell', async () => {
     const user = userEvent.setup();
-    const mockMutate = jest.fn().mockResolvedValue(undefined);
+    const mockMutate = vi.fn().mockResolvedValue(undefined);
 
     // Create obs data without weight observation
     const obsDataWithoutWeight = mockObsData.filter(
@@ -431,7 +463,7 @@ describe('ObsTableHorizontal editable mode', () => {
 
   it('should cancel editing when cancel button is clicked', async () => {
     const user = userEvent.setup();
-    const mockMutate = jest.fn().mockResolvedValue(undefined);
+    const mockMutate = vi.fn().mockResolvedValue(undefined);
 
     mockUseObs.mockReturnValue({
       data: { observations: mockObsData, concepts: mockConceptData, encounters: mockEncounters },
@@ -481,7 +513,7 @@ describe('ObsTableHorizontal editable mode', () => {
 
   it('should cancel editing when Escape key is pressed', async () => {
     const user = userEvent.setup();
-    const mockMutate = jest.fn().mockResolvedValue(undefined);
+    const mockMutate = vi.fn().mockResolvedValue(undefined);
 
     mockUseObs.mockReturnValue({
       data: { observations: mockObsData, concepts: mockConceptData, encounters: mockEncounters },
@@ -522,7 +554,7 @@ describe('ObsTableHorizontal editable mode', () => {
 
   it('should save when Enter key is pressed', async () => {
     const user = userEvent.setup();
-    const mockMutate = jest.fn().mockResolvedValue(undefined);
+    const mockMutate = vi.fn().mockResolvedValue(undefined);
 
     mockUseObs.mockReturnValue({
       data: { observations: mockObsData, concepts: mockConceptData, encounters: mockEncounters },
@@ -565,7 +597,7 @@ describe('ObsTableHorizontal editable mode', () => {
 
   it('should handle text observations', async () => {
     const user = userEvent.setup();
-    const mockMutate = jest.fn().mockResolvedValue(undefined);
+    const mockMutate = vi.fn().mockResolvedValue(undefined);
 
     mockUseObs.mockReturnValue({
       data: { observations: mockObsData, concepts: mockConceptData, encounters: mockEncounters },
@@ -608,7 +640,7 @@ describe('ObsTableHorizontal editable mode', () => {
 
   it('should handle coded observations', async () => {
     const user = userEvent.setup();
-    const mockMutate = jest.fn().mockResolvedValue(undefined);
+    const mockMutate = vi.fn().mockResolvedValue(undefined);
 
     mockUseObs.mockReturnValue({
       data: { observations: mockObsData, concepts: mockConceptData, encounters: mockEncounters },
@@ -657,9 +689,54 @@ describe('ObsTableHorizontal editable mode', () => {
     );
   });
 
+  it('should save a zero value for a numeric observation', async () => {
+    const user = userEvent.setup();
+    const mockMutate = vi.fn().mockResolvedValue(undefined);
+
+    mockUseObs.mockReturnValue({
+      data: { observations: mockObsData, concepts: mockConceptData, encounters: mockEncounters },
+      error: null,
+      isLoading: false,
+      isValidating: false,
+      mutate: mockMutate,
+    });
+    mockUseConfig.mockReturnValue({
+      ...(getDefaultsFromConfigSchema(configSchemaHorizontal) as object),
+      title: 'Vitals',
+      editable: true,
+      data: [
+        { concept: '5090AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', label: 'Height' },
+        { concept: '5089AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', label: 'Weight' },
+      ],
+    });
+
+    render(<ObsTableHorizontal patientUuid="patient-123" />);
+
+    const heightCell = screen.getByRole('cell', { name: /182/ });
+    await user.hover(heightCell);
+    const editButton = within(heightCell).getByRole('button', { name: 'Edit' });
+    await user.click(editButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole('spinbutton')).toBeInTheDocument();
+    });
+
+    const input = screen.getByRole('spinbutton');
+    await user.clear(input);
+    await user.type(input, '0');
+
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    await user.click(saveButton);
+
+    await waitFor(() => {
+      expect(mockUpdateObservation).toHaveBeenCalledWith('obs-1', 0);
+    });
+    expect(mockMutate).toHaveBeenCalled();
+  });
+
   it('should not save when value is unchanged', async () => {
     const user = userEvent.setup();
-    const mockMutate = jest.fn().mockResolvedValue(undefined);
+    const mockMutate = vi.fn().mockResolvedValue(undefined);
 
     mockUseObs.mockReturnValue({
       data: { observations: mockObsData, concepts: mockConceptData, encounters: mockEncounters },
@@ -701,7 +778,7 @@ describe('ObsTableHorizontal editable mode', () => {
 
   it('should not create observation when editing empty cell and nothing is entered', async () => {
     const user = userEvent.setup();
-    const mockMutate = jest.fn().mockResolvedValue(undefined);
+    const mockMutate = vi.fn().mockResolvedValue(undefined);
 
     // Create obs data where one encounter is missing a Weight observation
     // This will create an empty cell in an existing encounter
@@ -763,7 +840,7 @@ describe('ObsTableHorizontal editable mode', () => {
 
   it('should create and save encounter', async () => {
     const user = userEvent.setup();
-    const mockMutate = jest.fn().mockResolvedValue(undefined);
+    const mockMutate = vi.fn().mockResolvedValue(undefined);
     const newEncounterUuid = 'new-encounter-uuid-123';
 
     mockUseObs.mockReturnValue({
@@ -858,7 +935,7 @@ describe('ObsTableHorizontal editable mode', () => {
 
   it('should show error snackbar when update fails', async () => {
     const user = userEvent.setup();
-    const mockMutate = jest.fn().mockResolvedValue(undefined);
+    const mockMutate = vi.fn().mockResolvedValue(undefined);
     const error = new Error('Update failed');
     mockUpdateObservation.mockRejectedValue(error);
 

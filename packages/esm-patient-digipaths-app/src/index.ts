@@ -9,6 +9,28 @@ import {
 import { createDashboardLink } from '@openmrs/esm-patient-common-lib';
 import { configSchema } from './config-schema';
 import digipathsOverviewComponent from './biometrics/digipaths-overview.component';
+import {
+  calcBpControl,
+  calcBpTarget,
+  calcCDK_Risk,
+  calcCVDRiskCategory,
+  calcEGFR,
+  calcEGFR_Stage,
+  calcFootCare,
+  calcHtnGrade,
+  calcPatientConditions,
+  calcPhq9,
+  calcPhq9Grade,
+  calcSouthEastAsiaCVDRisk,
+  calcSouthEastAsiaLabCVDRisk,
+  calcSouthEastAsiaNonLabCVDRisk,
+  calcSouthEastAsiaNonLabCVDRisk2,
+  calcSuicideRisk,
+  calcTest,
+  calcUACR_Category,
+} from './customCalcResources/customCalculations';
+
+import { registerExpressionHelper } from '@openmrs/esm-form-engine-lib';
 
 const moduleName = '@openmrs/esm-patient-digipaths-app';
 
@@ -29,6 +51,25 @@ export function startupApp() {
     type: 'registerDynamicRoute',
     pattern: `.+${restBaseUrl}/concept.+`,
   });
+
+  registerExpressionHelper('calcHtnGrade', calcHtnGrade);
+  registerExpressionHelper('calcBpControl', calcBpControl);
+  registerExpressionHelper('calcSouthEastAsiaNonLabCVDRisk2', calcSouthEastAsiaNonLabCVDRisk2);
+  registerExpressionHelper('calcFootCare', calcFootCare);
+  registerExpressionHelper('calcPhq9', calcPhq9);
+  registerExpressionHelper('calcPhq9Grade', calcPhq9Grade);
+  registerExpressionHelper('calcEGFR', calcEGFR);
+  registerExpressionHelper('calcEGFR_Stage', calcEGFR_Stage);
+  registerExpressionHelper('calcUACR_Category', calcUACR_Category);
+  registerExpressionHelper('calcCDK_Risk', calcCDK_Risk);
+  registerExpressionHelper('calcSouthEastAsiaNonLabCVDRisk', calcSouthEastAsiaNonLabCVDRisk);
+  registerExpressionHelper('calcCVDRiskCategory', calcCVDRiskCategory);
+  registerExpressionHelper('calcTest', calcTest);
+  registerExpressionHelper('calcSouthEastAsiaLabCVDRisk', calcSouthEastAsiaLabCVDRisk);
+  registerExpressionHelper('calcSouthEastAsiaCVDRisk', calcSouthEastAsiaCVDRisk);
+  registerExpressionHelper('calcSuicideRisk', calcSuicideRisk);
+  registerExpressionHelper('calcPatientConditions', calcPatientConditions);
+  registerExpressionHelper('calcBpTarget', calcBpTarget);
 
   defineConfigSchema(moduleName, configSchema);
 }

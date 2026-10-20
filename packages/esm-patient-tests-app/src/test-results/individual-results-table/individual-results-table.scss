@@ -3,7 +3,7 @@
 @use '@carbon/type';
 @use '@openmrs/esm-styleguide/src/vars' as *;
 
-p {
+.table p {
   @include type.type-style('body-compact-01');
 }
 
@@ -143,11 +143,15 @@ p {
 }
 
 .col-testName {
-  width: 50%;
+  width: 36%;
+}
+
+.col-resultDate {
+  width: 22%;
 }
 
 .col-value {
-  width: 25%;
+  width: 17%;
 }
 
 .col-referenceRange {
