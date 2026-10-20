@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSWRConfig } from 'swr';
-import { launchWorkspaceGroup2, useVisit, type Visit } from '@openmrs/esm-framework';
+import { useVisit, type Visit } from '@openmrs/esm-framework';
 import {
   invalidateVisitByUuid,
   type PatientWorkspace2DefinitionProps,
@@ -16,6 +16,10 @@ export interface VisitFormProps {
    */
   openedFrom: string;
   showPatientHeader?: boolean;
+  /**
+   * Called after the visit is saved and set as the patient chart's visit context.
+   */
+  onVisitStarted?: (visit: Visit) => void;
 }
 
 /**
@@ -26,7 +30,7 @@ export interface VisitFormProps {
  * @see exported-visit-form.workspace.tsx
  */
 const VisitForm: React.FC<PatientWorkspace2DefinitionProps<VisitFormProps, {}>> = ({
-  workspaceProps: { openedFrom, showPatientHeader = false },
+  workspaceProps: { openedFrom, showPatientHeader = false, onVisitStarted: onVisitStartedCallback },
   groupProps: { patient, patientUuid, visitContext },
   ...rest
 }) => {
@@ -41,13 +45,7 @@ const VisitForm: React.FC<PatientWorkspace2DefinitionProps<VisitFormProps, {}>> 
     const mutateSavedOrUpdatedVisit = () => invalidateVisitByUuid(globalMutate, visit.uuid);
     mutateActiveVisit();
     setVisitContext?.(visit, mutateSavedOrUpdatedVisit);
-
-    launchWorkspaceGroup2('patient-chart', {
-      patient,
-      patientUuid,
-      visitContext: visit,
-      mutateVisitContext: mutateSavedOrUpdatedVisit,
-    });
+    onVisitStartedCallback?.(visit);
   };
   return (
     <ExportedVisitForm

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   DataTable,
@@ -9,10 +9,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  type DataTableSortState,
 } from '@carbon/react';
-import { useLayoutType, usePagination } from '@openmrs/esm-framework';
+import { NumericObservation, useLayoutType, usePagination } from '@openmrs/esm-framework';
 import { PatientChartPagination } from '@openmrs/esm-patient-common-lib';
+import { noopSortRow, useTableSorting } from '../common';
 import type { BiometricsTableHeader, BiometricsTableRow } from './types';
 import { VitalsAndBiometricsActionMenu } from '../components/action-menu/vitals-biometrics-action-menu.component';
 import styles from './paginated-biometrics.scss';
@@ -24,6 +24,7 @@ interface PaginatedBiometricsProps {
   urlLabel: string;
   tableHeaders: Array<BiometricsTableHeader>;
   patient: fhir.Patient;
+  patientUuid: string;
 }
 
 const PaginatedBiometrics: React.FC<PaginatedBiometricsProps> = ({
@@ -33,49 +34,20 @@ const PaginatedBiometrics: React.FC<PaginatedBiometricsProps> = ({
   urlLabel,
   tableHeaders,
   patient,
+  patientUuid,
 }) => {
   const isTablet = useLayoutType() === 'tablet';
 
   const { t } = useTranslation();
 
-  const [sortParams, setSortParams] = useState<{ key: string; sortDirection: 'ASC' | 'DESC' | 'NONE' }>({
-    key: '',
-    sortDirection: 'NONE',
-  });
-
-  const handleSorting = (
-    cellA: any,
-    cellB: any,
-    { key, sortDirection }: { key: string; sortDirection: DataTableSortState },
-  ) => {
-    if (sortDirection === 'NONE') {
-      setSortParams({ key: '', sortDirection });
-    } else {
-      setSortParams({ key, sortDirection });
-    }
-    return 0;
-  };
-
-  const sortedData: Array<BiometricsTableRow> = useMemo(() => {
-    if (sortParams.sortDirection === 'NONE') {
-      return tableRows;
-    }
-
-    const header = tableHeaders.find((header) => header.key === sortParams.key);
-
-    if (!header) {
-      return tableRows;
-    }
-
-    const sortedRows = tableRows.slice().sort((rowA, rowB) => {
-      const sortingNum = header.sortFunc(rowA, rowB);
-      return sortParams.sortDirection === 'DESC' ? sortingNum : -sortingNum;
-    });
-
-    return sortedRows;
-  }, [tableRows, tableHeaders, sortParams]);
+  const { handleSortHeaderClick, sortedData } = useTableSorting<BiometricsTableRow>(tableRows, tableHeaders);
 
   const { results: paginatedBiometrics, goTo, currentPage } = usePagination(sortedData, pageSize);
+
+  const headerByKey = useMemo(
+    () => new Map<string, BiometricsTableHeader>(tableHeaders.map((h) => [h.key, h])),
+    [tableHeaders],
+  );
 
   return (
     <>
@@ -85,7 +57,7 @@ const PaginatedBiometrics: React.FC<PaginatedBiometricsProps> = ({
         overflowMenuOnHover={!isTablet}
         rows={paginatedBiometrics}
         size={isTablet ? 'lg' : 'sm'}
-        sortRow={handleSorting}
+        sortRow={noopSortRow}
         useZebraStyles
       >
         {({ getHeaderProps, getTableProps, headers, rows }) => (
@@ -94,11 +66,7 @@ const PaginatedBiometrics: React.FC<PaginatedBiometricsProps> = ({
               <TableHead>
                 <TableRow>
                   {headers.map((header) => (
-                    <TableHeader
-                      {...getHeaderProps({
-                        header,
-                      })}
-                    >
+                    <TableHeader {...getHeaderProps({ header, onClick: handleSortHeaderClick })} key={header.key}>
                       {header.header}
                     </TableHeader>
                   ))}
@@ -106,16 +74,39 @@ const PaginatedBiometrics: React.FC<PaginatedBiometricsProps> = ({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.cells.map((cell) => (
-                      <TableCell key={cell.id}>{cell.value?.content ?? cell.value}</TableCell>
-                    ))}
-                    <TableCell className="cds--table-column-menu" id="actions">
-                      <VitalsAndBiometricsActionMenu patient={patient} encounterUuid={row.id} />
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {rows.map((row) => {
+                  const biometricsObj = paginatedBiometrics.find((obj) => obj.id === row.id);
+
+                  return (
+                    <TableRow key={row.id}>
+                      {row.cells.map((cell) => {
+                        if (cell.info.header === 'dateRender') {
+                          return <TableCell key={cell.id}>{cell.value?.content ?? cell.value}</TableCell>;
+                        }
+
+                        const interpretationKey = cell.info.header + 'Interpretation';
+                        const interpretation = biometricsObj?.[interpretationKey];
+                        const conceptUuid = headerByKey.get(cell.info.header)?.conceptUuid;
+                        const rawValue = cell.value?.content ?? cell.value;
+
+                        return (
+                          <TableCell key={cell.id} className={styles.numericObsCell}>
+                            <NumericObservation
+                              value={rawValue}
+                              interpretation={interpretation}
+                              conceptUuid={conceptUuid}
+                              patientUuid={patientUuid}
+                              variant="cell"
+                            />
+                          </TableCell>
+                        );
+                      })}
+                      <TableCell className="cds--table-column-menu" id="actions">
+                        <VitalsAndBiometricsActionMenu patient={patient} encounterUuid={row.id} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>

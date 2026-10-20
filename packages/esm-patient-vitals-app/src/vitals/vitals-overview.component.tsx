@@ -1,7 +1,14 @@
-import React, { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
+import React, { type ChangeEvent, Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useReactToPrint } from 'react-to-print';
-import { Button, ContentSwitcher, DataTableSkeleton, IconSwitch, InlineLoading } from '@carbon/react';
+import {
+  Button,
+  ContentSwitcher,
+  DataTableSkeleton,
+  IconSwitch,
+  InlineLoading,
+  SkeletonPlaceholder,
+} from '@carbon/react';
 import { Analytics, Table } from '@carbon/react/icons';
 import { CardHeader, EmptyState, ErrorState } from '@openmrs/esm-patient-common-lib';
 import {
@@ -20,8 +27,15 @@ import { useLaunchVitalsAndBiometricsForm } from '../utils';
 import { useVitalsAndBiometrics, useConceptUnits, withUnit } from '../common';
 import PaginatedVitals from './paginated-vitals.component';
 import PrintComponent from './print/print.component';
-import VitalsChart from './vitals-chart.component';
 import styles from './vitals-overview.scss';
+
+const loadVitalsChart = () => import('./vitals-chart.component');
+const VitalsChart = lazy(loadVitalsChart);
+
+// A failed prefetch is ignored. Opening the chart view retries the import through React.lazy.
+const prefetchVitalsChart = () => {
+  loadVitalsChart().catch(() => {});
+};
 
 interface VitalsOverviewProps {
   patientUuid: string;
@@ -65,14 +79,14 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
 
     const identifiers =
       patient?.identifier?.filter(
-        (identifier) => !excludePatientIdentifierCodeTypes?.uuids.includes(identifier.type.coding[0].code),
+        (identifier) => !excludePatientIdentifierCodeTypes?.uuids.includes(identifier.type?.coding?.[0]?.code),
       ) ?? [];
 
     return {
       name: patient ? getPatientName(patient) : '',
       age: age(patient?.birthDate),
       gender: getGender(patient?.gender),
-      location: patient?.address?.[0].city,
+      location: patient?.address?.[0]?.city,
       identifiers: identifiers?.length ? identifiers.map(({ value }) => value) : [],
     };
   }, [patient, t, excludePatientIdentifierCodeTypes?.uuids]);
@@ -86,6 +100,7 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
     },
     {
       key: 'temperatureRender',
+      conceptUuid: config.concepts.temperatureUuid,
       header: withUnit(t('temperatureAbbreviated', 'Temp'), conceptUnits.get(config.concepts.temperatureUuid) ?? ''),
       isSortable: true,
       sortFunc: (valueA, valueB) =>
@@ -107,12 +122,14 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
     },
     {
       key: 'pulseRender',
+      conceptUuid: config.concepts.pulseUuid,
       header: withUnit(t('pulse', 'Pulse'), conceptUnits.get(config.concepts.pulseUuid) ?? ''),
       isSortable: true,
       sortFunc: (valueA, valueB) => (valueA.pulse && valueB.pulse ? valueA.pulse - valueB.pulse : 0),
     },
     {
       key: 'respiratoryRateRender',
+      conceptUuid: config.concepts.respiratoryRateUuid,
       header: withUnit(
         t('respiratoryRateAbbreviated', 'R. Rate'),
         conceptUnits.get(config.concepts.respiratoryRateUuid) ?? '',
@@ -123,6 +140,7 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
     },
     {
       key: 'spo2Render',
+      conceptUuid: config.concepts.oxygenSaturationUuid,
       header: withUnit(t('spo2', 'SpO2'), conceptUnits.get(config.concepts.oxygenSaturationUuid) ?? ''),
       isSortable: true,
       sortFunc: (valueA, valueB) => (valueA.spo2 && valueB.spo2 ? valueA.spo2 - valueB.spo2 : 0),
@@ -197,6 +215,8 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
                     onChange={(evt: ChangeEvent<HTMLButtonElement> & { name: string }) =>
                       setChartView(evt.name === 'chartView')
                     }
+                    onFocus={prefetchVitalsChart}
+                    onMouseEnter={prefetchVitalsChart}
                     size={isTablet ? 'md' : 'sm'}
                     selectedIndex={chartView ? 1 : 0}
                   >
@@ -232,7 +252,17 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
                 </div>
               </CardHeader>
               {chartView ? (
-                <VitalsChart patientVitals={vitals} conceptUnits={conceptUnits} config={config} />
+                <Suspense
+                  fallback={
+                    <SkeletonPlaceholder
+                      className={styles.chartSkeleton}
+                      role="progressbar"
+                      aria-label={t('loading', 'Loading')}
+                    />
+                  }
+                >
+                  <VitalsChart patientVitals={vitals} conceptUnits={conceptUnits} config={config} />
+                </Suspense>
               ) : (
                 <div ref={contentToPrintRef}>
                   <PrintComponent subheader={headerTitle} patientDetails={patientDetails} />
@@ -240,6 +270,7 @@ const VitalsOverview: React.FC<VitalsOverviewProps> = ({ patientUuid, patient, p
                     isPrinting={isPrinting}
                     pageSize={pageSize}
                     pageUrl={pageUrl}
+                    patientUuid={patientUuid}
                     tableHeaders={tableHeaders}
                     tableRows={tableRows}
                     urlLabel={urlLabel}

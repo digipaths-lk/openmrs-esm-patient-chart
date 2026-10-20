@@ -303,14 +303,14 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
 
     const identifiers =
       patient?.identifier?.filter(
-        (identifier) => !excludePatientIdentifierCodeTypes?.uuids?.includes(identifier.type.coding[0].code),
+        (identifier) => !excludePatientIdentifierCodeTypes?.uuids?.includes(identifier.type?.coding?.[0]?.code),
       ) ?? [];
 
     return {
       name: patient ? getPatientName(patient) : '',
       age: age(patient?.birthDate),
       gender: getGender(patient?.gender),
-      location: patient?.address?.[0].city,
+      location: patient?.address?.[0]?.city,
       identifiers: identifiers?.length ? identifiers.map(({ value }) => value) : [],
     };
   }, [patient, excludePatientIdentifierCodeTypes?.uuids]);
@@ -337,6 +337,25 @@ const OrderDetailsTable: React.FC<OrderDetailsProps> = ({
       onBeforeGetContentResolve.current = null;
       setIsPrinting(false);
     },
+    pageStyle: `
+      @page {
+        /* Remove browser default header (title) and footer (url) */
+        margin: 0;
+      }
+      @media print {
+        html,
+        body {
+          /* Tell browsers to print background colors */
+          -webkit-print-color-adjust: exact;
+          color-adjust: exact;
+          margin: 0 !important;
+          width: fit-content;
+          padding: 0 !important;
+          overflow: hidden;
+          page-break-inside: avoid;
+        }
+      }
+    `,
   });
 
   const orderTypesToDisplay = useMemo(
@@ -620,7 +639,7 @@ function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsPr
       patient,
       patientUuid: patient.id,
       visitContext: orderItem.encounter.visit,
-      mutateVisitContext: invalidateVisitByUuid(globalMutate, orderItem.encounter.visit.uuid),
+      mutateVisitContext: () => invalidateVisitByUuid(globalMutate, orderItem.encounter.visit?.uuid),
     }),
     [patient, orderItem.encounter.visit, globalMutate],
   );
@@ -698,7 +717,13 @@ function OrderBasketItemActions({ orderItem, patient }: OrderBasketItemActionsPr
 
   return (
     <Layer className={styles.layer}>
-      <OverflowMenu aria-label={t('actionsMenu', 'Actions menu')} align="left" flipped selectorPrimaryFocus="#modify">
+      <OverflowMenu
+        aria-label={t('actionsMenu', 'Actions menu')}
+        iconDescription={t('actionsMenu', 'Actions menu')}
+        align="left"
+        flipped
+        selectorPrimaryFocus="#modify"
+      >
         <OverflowMenuItem
           className={styles.menuItem}
           disabled={alreadyInBasket}

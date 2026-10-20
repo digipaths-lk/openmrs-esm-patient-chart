@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
-import { type ConfigObject, useExtensionStore, registerExtensionSlot } from '@openmrs/esm-framework';
+import {
+  type ConfigObject,
+  getAssignedExtensions,
+  registerExtensionSlot,
+  useAssignedExtensions,
+  useExtensionStore,
+} from '@openmrs/esm-framework';
 import { DashboardView, type DashboardConfig, type LayoutMode } from './dashboard-view.component';
 import { basePath } from '../../constants';
 
@@ -16,6 +22,33 @@ function makePath(target: DashboardConfig, params: Record<string, string> = {}) 
   });
 
   return parts.join('/');
+}
+
+/**
+ * Maps old dashboard URL path segments to their new lowercase/hyphenated equivalents.
+ * This ensures that existing bookmarks, shared links, and external references
+ * continue to resolve to the correct dashboard after the path rename.
+ */
+const legacyPathAliases: Record<string, string> = {
+  'Patient Summary': 'patient-summary',
+  'Vitals & Biometrics': 'vitals-and-biometrics',
+  'Vitals %26 Biometrics': 'vitals-and-biometrics',
+  Allergies: 'allergies',
+  Appointments: 'appointments',
+  Attachments: 'attachments',
+  'Billing history': 'billing-history',
+  Conditions: 'conditions',
+  Encounters: 'encounters',
+  Immunizations: 'immunizations',
+  Medications: 'medications',
+  Orders: 'orders',
+  Programs: 'programs',
+  Results: 'results',
+  Visits: 'visits',
+};
+
+function resolveView(view: string): string {
+  return legacyPathAliases[view] ?? view;
 }
 
 function isDashboardConfig(obj: unknown): obj is DashboardConfig {
@@ -54,12 +87,13 @@ interface ChartReviewProps {
 
 const ChartReview: React.FC<ChartReviewProps> = ({ patientUuid, patient, view, setDashboardLayoutMode }) => {
   const extensionStore = useExtensionStore();
+  const assignedExtensions = useAssignedExtensions('patient-chart-dashboard-slot');
 
-  const dashboards = extensionStore.slots['patient-chart-dashboard-slot'].assignedExtensions
+  const dashboards = assignedExtensions
     .flatMap((e) => {
       if (e.config?.slotName) {
         if (e.config.slotName in extensionStore.slots) {
-          return extensionStore.slots[e.config.slotName].assignedExtensions.map((e) =>
+          return getAssignedExtensions(e.config.slotName).map((e) =>
             getDashboardDefinition(e.meta, e.config, e.moduleName, e.name),
           );
         } else {
@@ -76,9 +110,10 @@ const ChartReview: React.FC<ChartReviewProps> = ({ patientUuid, patient, view, s
     .filter(Boolean);
 
   const defaultDashboard = dashboards.filter((dashboard) => Boolean(dashboard.path))?.[0];
+  const resolvedView = resolveView(view);
   const dashboard = useMemo(() => {
-    return dashboards.find((dashboard) => dashboard.path === view);
-  }, [dashboards, view]);
+    return dashboards.find((dashboard) => dashboard.path === resolvedView);
+  }, [dashboards, resolvedView]);
 
   useEffect(() => {
     const activeDashboard = dashboard ?? defaultDashboard;

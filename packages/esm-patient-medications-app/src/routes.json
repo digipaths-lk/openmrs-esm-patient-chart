@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.openmrs.org/routes.schema.json",
   "backendDependencies": {
-    "webservices.rest": ">=2.2.0"
+    "webservices.rest": ">=2.27.0"
   },
   "optionalBackendDependencies": {
     "providermanagement": {
@@ -40,13 +40,22 @@
       "order": 4
     },
     {
+      "name": "future-medications-widget",
+      "component": "futureMedications",
+      "slot": "patient-chart-summary-dashboard-slot",
+      "meta": {
+        "fullWidth": false
+      },
+      "order": 5
+    },
+    {
       "name": "past-medications-widget",
       "component": "pastMedications",
       "slot": "patient-chart-summary-dashboard-slot",
       "meta": {
         "fullWidth": false
       },
-      "order": 5
+      "order": 6
     },
     {
       "name": "medications-summary-dashboard",
@@ -55,7 +64,7 @@
       "order": 3,
       "meta": {
         "slot": "patient-chart-medications-dashboard-slot",
-        "path": "Medications"
+        "path": "medications"
       }
     },
     {

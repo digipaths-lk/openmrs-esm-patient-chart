@@ -1,48 +1,36 @@
 import React from 'react';
+import { vi, describe, expect, test } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { screen, render } from '@testing-library/react';
-import {
-  type AssignedExtension,
-  type ExtensionSlotState,
-  useExtensionStore,
-  useExtensionSlotMeta,
-} from '@openmrs/esm-framework';
+import { useAssignedExtensions, useExtensionStore } from '@openmrs/esm-framework';
 import { mockPatient } from 'tools';
 import ChartReview from './chart-review.component';
 
-const mockUseExtensionStore = jest.mocked(useExtensionStore);
-const mockUseExtensionSlotMeta = jest.mocked(useExtensionSlotMeta);
+const mockUseAssignedExtensions = vi.mocked(useAssignedExtensions);
+const mockUseExtensionStore = vi.mocked(useExtensionStore);
 
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
-  Redirect: jest.fn(),
-  useMatch: jest.fn().mockReturnValue({
+vi.mock('react-router-dom', async () => ({
+  ...((await vi.importActual('react-router-dom')) as object),
+  Redirect: vi.fn(),
+  useMatch: vi.fn().mockReturnValue({
     params: {
       url: '/patient/8673ee4f-e2ab-4077-ba55-4980f408773e/chart',
-      view: 'Patient Summary',
+      view: 'patient-summary',
     },
   }),
 }));
-
-function slotMetaFromStore(store, slotName) {
-  return Object.fromEntries(
-    store.slots[slotName].assignedExtensions.map((e) => {
-      return [e.name, e.meta];
-    }),
-  );
-}
 
 describe('ChartReview', () => {
   test('renders a grid-based layout', () => {
     const mockStore = {
       slots: {
         'patient-chart-dashboard-slot': {
-          assignedExtensions: [
+          candidateExtensions: [
             {
               name: 'charts-summary-dashboard',
               meta: {
                 slot: 'patient-chart-summary-dashboard-slot',
-                path: 'Patient Summary',
+                path: 'patient-summary',
                 title: 'Patient Summary',
               },
             },
@@ -54,20 +42,20 @@ describe('ChartReview', () => {
                 title: 'Test Results',
               },
             },
-          ] as unknown as AssignedExtension[],
+          ],
         },
         'patient-chart-summary-dashboard-slot': {
-          assignedExtensions: [],
+          candidateExtensions: [],
         },
-      } as Record<string, ExtensionSlotState>,
+      },
     };
 
     mockUseExtensionStore.mockReturnValue(mockStore as unknown as ReturnType<typeof useExtensionStore>);
-    mockUseExtensionSlotMeta.mockImplementation((slotName) => slotMetaFromStore(mockStore, slotName));
+    mockUseAssignedExtensions.mockImplementation((slotName) => mockStore.slots[slotName]?.candidateExtensions ?? []);
 
     render(
       <BrowserRouter>
-        <ChartReview patient={mockPatient} patientUuid={mockPatient.id} view="Patient Summary" />
+        <ChartReview patient={mockPatient} patientUuid={mockPatient.id} view="patient-summary" />
       </BrowserRouter>,
     );
 

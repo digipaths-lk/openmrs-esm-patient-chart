@@ -3,10 +3,10 @@ import * as Framework from '@openmrs/esm-framework';
 import { createDashboardLink } from '@openmrs/esm-patient-common-lib';
 import { esmPatientChartSchema } from './config-schema';
 import { moduleName } from './constants';
-import { setupCacheableRoutes, setupOfflineVisitsSync } from './offline';
 import { summaryDashboardMeta, encountersDashboardMeta } from './dashboard.meta';
 import deleteVisitActionButtonComponent from './actions-buttons/delete-visit.component';
 import currentVisitSummaryComponent from './visit/visits-widget/current-visit-summary.extension';
+import visitSummaryComponent from './visit/visits-widget/visit-summary.extension';
 import markPatientAliveActionButtonComponent from './actions-buttons/mark-patient-alive.component';
 import markPatientDeceasedActionButtonComponent from './actions-buttons/mark-patient-deceased.component';
 import pastVisitsOverviewComponent from './visit/visits-widget/visit-detail-overview.component';
@@ -24,9 +24,6 @@ window['_openmrs_esm_framework'] = Framework;
 export const importTranslation = require.context('../translations', false, /.json$/, 'lazy');
 
 export function startupApp() {
-  setupOfflineVisitsSync();
-  setupCacheableRoutes();
-
   defineConfigSchema(moduleName, esmPatientChartSchema);
 }
 
@@ -95,6 +92,11 @@ export const encountersSummaryDashboardLink =
 
 export const currentVisitSummary = getSyncLifecycle(currentVisitSummaryComponent, {
   featureName: 'current-visit-summary',
+  moduleName,
+});
+
+export const visitSummary = getSyncLifecycle(visitSummaryComponent, {
+  featureName: 'visit-summary',
   moduleName,
 });
 
@@ -183,6 +185,11 @@ export const activeVisitActionsComponent = getAsyncLifecycle(
 export const encounterListTableTabs = getAsyncLifecycle(
   () => import('./clinical-views/encounter-list/encounter-list-tabs.extension'),
   { featureName: 'encounter-list-table-tabs', moduleName },
+);
+
+export const clinicalViewsNavGroup = getAsyncLifecycle(
+  () => import('./clinical-views/clinical-views-nav-group.component'),
+  { featureName: 'clinical-views-nav-group', moduleName },
 );
 
 export const visitContextSwitcherModal = getAsyncLifecycle(

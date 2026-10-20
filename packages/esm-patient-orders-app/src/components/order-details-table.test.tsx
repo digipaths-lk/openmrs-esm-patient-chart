@@ -1,10 +1,12 @@
 import React from 'react';
+import { vi, describe, it, expect, test, beforeEach } from 'vitest';
 import { useReactToPrint } from 'react-to-print';
 import { screen, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   type ConfigObject,
   getDefaultsFromConfigSchema,
+  launchWorkspace2,
   openmrsFetch,
   useConfig,
   useSession,
@@ -21,43 +23,42 @@ import { mockOrders, mockSessionDataResponse } from '__mocks__';
 import { mockPatient } from 'tools';
 import OrderDetailsTable from './order-details-table.component';
 
-const mockUsePatientOrders = jest.mocked(usePatientOrders);
-const mockUseOrderTypes = jest.mocked(useOrderTypes);
-const mockUseOrderBasket = jest.mocked(useOrderBasket);
-const mockOpenmrsFetch = jest.mocked(openmrsFetch);
-const mockSession = jest.mocked(useSession);
-const mockUseConfig = jest.mocked(useConfig<ConfigObject>);
-const mockUseReactToPrint = jest.mocked(useReactToPrint);
+const mockUsePatientOrders = vi.mocked(usePatientOrders);
+const mockUseOrderTypes = vi.mocked(useOrderTypes);
+const mockUseOrderBasket = vi.mocked(useOrderBasket);
+const mockOpenmrsFetch = vi.mocked(openmrsFetch);
+const mockSession = vi.mocked(useSession);
+const mockUseConfig = vi.mocked(useConfig<ConfigObject>);
+const mockUseReactToPrint = vi.mocked(useReactToPrint);
+const mockLaunchWorkspace2 = vi.mocked(launchWorkspace2);
 
 mockSession.mockReturnValue(mockSessionDataResponse.data);
-mockOpenmrsFetch.mockImplementation(jest.fn());
+mockOpenmrsFetch.mockImplementation(vi.fn());
 
-jest.mock('react-to-print', () => ({
-  ...jest.requireActual('react-to-print'),
-  useReactToPrint: jest.fn(),
+vi.mock('react-to-print', async () => ({
+  ...((await vi.importActual('react-to-print')) as object),
+  useReactToPrint: vi.fn(),
 }));
 
-jest.mock('@openmrs/esm-patient-common-lib', () => {
-  const originalModule = jest.requireActual('@openmrs/esm-patient-common-lib');
+vi.mock('@openmrs/esm-patient-common-lib', async () => {
+  const originalModule = (await vi.importActual('@openmrs/esm-patient-common-lib')) as object;
 
   return {
     ...originalModule,
-    usePatientOrders: jest.fn(),
-    useOrderTypes: jest.fn(),
-    usePatient: jest.fn(),
-    useOrderBasket: jest.fn(),
+    usePatientOrders: vi.fn(),
+    useOrderTypes: vi.fn(),
+    usePatient: vi.fn(),
+    useOrderBasket: vi.fn(),
   };
 });
 
-jest.mock('./general-order-table.component', () => ({
-  __esModule: true,
+vi.mock('./general-order-table.component', () => ({
   default: function MockGeneralOrderTable() {
     return 'General order details';
   },
 }));
 
-jest.mock('./medication-record.component', () => ({
-  __esModule: true,
+vi.mock('./medication-record.component', () => ({
   default: function MockMedicationRecord() {
     return 'Medication details';
   },
@@ -118,8 +119,8 @@ describe('OrderDetailsTable', () => {
   beforeEach(() => {
     mockUseOrderBasket.mockReturnValue({
       orders: [],
-      setOrders: jest.fn(),
-      clearOrders: jest.fn(),
+      setOrders: vi.fn(),
+      clearOrders: vi.fn(),
     });
     mockUseOrderTypes.mockReturnValue({
       data: [drugOrderType, testOrderType],
@@ -132,7 +133,7 @@ describe('OrderDetailsTable', () => {
       error: undefined,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
   });
 
@@ -148,7 +149,7 @@ describe('OrderDetailsTable', () => {
       error: undefined,
       isLoading: true,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
 
     renderOrderDetailsTable();
@@ -179,7 +180,7 @@ describe('OrderDetailsTable', () => {
       error: error,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
 
     renderOrderDetailsTable();
@@ -247,7 +248,7 @@ describe('OrderDetailsTable', () => {
   });
 
   it('prints the orders in the list when the print button is clicked', async () => {
-    const mockHandlePrint = jest.fn();
+    const mockHandlePrint = vi.fn();
     mockUseReactToPrint.mockReturnValue(mockHandlePrint);
     mockUseConfig.mockReturnValue({
       ...getDefaultsFromConfigSchema(configSchema),
@@ -285,7 +286,7 @@ describe('OrderDetailsTable', () => {
       error: undefined,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
 
     renderOrderDetailsTable();
@@ -310,7 +311,7 @@ describe('OrderDetailsTable', () => {
       error: undefined,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
 
     renderOrderDetailsTable();
@@ -329,7 +330,7 @@ describe('OrderDetailsTable', () => {
       error: undefined,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
 
     renderOrderDetailsTable();
@@ -354,7 +355,7 @@ describe('OrderDetailsTable', () => {
       error: undefined,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
 
     renderOrderDetailsTable();
@@ -373,7 +374,7 @@ describe('OrderDetailsTable', () => {
       error: undefined,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
 
     renderOrderDetailsTable();
@@ -395,7 +396,7 @@ describe('OrderDetailsTable', () => {
       error: undefined,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
 
     renderOrderDetailsTable();
@@ -426,7 +427,7 @@ describe('OrderDetailsTable', () => {
         error: undefined,
         isLoading: false,
         isValidating: false,
-        mutate: jest.fn(),
+        mutate: vi.fn(),
       };
     });
 
@@ -497,7 +498,7 @@ describe('OrderDetailsTable', () => {
       error: undefined,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
 
     renderOrderDetailsTable();
@@ -518,7 +519,7 @@ describe('OrderDetailsTable', () => {
       error: undefined,
       isLoading: false,
       isValidating: true,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
 
     renderOrderDetailsTable();
@@ -542,7 +543,7 @@ describe('OrderDetailsTable', () => {
       error: undefined,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
 
     renderOrderDetailsTable();
@@ -550,7 +551,7 @@ describe('OrderDetailsTable', () => {
     await screen.findByRole('table');
 
     expect(screen.getByText(/ORD-DECLINED/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /options/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /actions menu/i })).not.toBeInTheDocument();
   });
 
   it('renders an empty state when there are order types but no orders', async () => {
@@ -559,7 +560,7 @@ describe('OrderDetailsTable', () => {
       error: undefined,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
 
     renderOrderDetailsTable();
@@ -576,14 +577,41 @@ describe('OrderDetailsTable', () => {
       error: undefined,
       isLoading: false,
       isValidating: false,
-      mutate: jest.fn(),
+      mutate: vi.fn(),
     });
 
     renderOrderDetailsTable();
 
     await screen.findByRole('table');
 
-    expect(screen.getByRole('button', { name: /options/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /actions menu/i })).toBeInTheDocument();
+  });
+
+  it('passes a visit context refresh function to the order basket when cancelling an order', async () => {
+    mockUsePatientOrders.mockReturnValue({
+      data: [mockOrders[1]] as unknown as Array<Order>,
+      error: undefined,
+      isLoading: false,
+      isValidating: false,
+      mutate: vi.fn(),
+    });
+
+    renderOrderDetailsTable();
+
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: /actions menu/i }));
+    const menuItems = screen.getAllByRole('menuitem', { hidden: true });
+    await user.click(menuItems.find((item) => /cancel order/i.test(item.textContent)));
+
+    expect(mockLaunchWorkspace2).toHaveBeenCalledWith(
+      'order-basket',
+      {},
+      expect.anything(),
+      expect.objectContaining({
+        visitContext: mockOrders[1].encounter.visit,
+        mutateVisitContext: expect.any(Function),
+      }),
+    );
   });
 });
 

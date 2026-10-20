@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.openmrs.org/routes.schema.json",
   "backendDependencies": {
-    "webservices.rest": ">=2.2.0"
+    "webservices.rest": ">=2.49.0"
   },
   "optionalBackendDependencies": {
     "fhirproxy": "^1.0.0-SNAPSHOT",
@@ -43,7 +43,7 @@
       "slot": "patient-chart-dashboard-slot",
       "meta": {
         "slot": "patient-chart-orders-dashboard-slot",
-        "path": "Orders",
+        "path": "orders",
         "hideDashboardTitle": true
       },
       "order": 4
@@ -55,6 +55,21 @@
       "meta": {
         "fullWidth": false
       }
+    },
+    {
+      "name": "drug-favorites-list",
+      "component": "drugFavoritesListExtension",
+      "slot": "drug-search-slot"
+    },
+    {
+      "name": "drug-pin-button",
+      "component": "drugPinButton",
+      "slot": "drug-search-result-actions-slot"
+    },
+    {
+      "name": "drug-order-pin-action",
+      "component": "drugOrderPinAction",
+      "slot": "drug-order-form-actions-slot"
     }
   ],
   "workspaces2": [

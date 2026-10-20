@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CodeSnippetSkeleton, Tile, Layer, Grid, Column } from '@carbon/react';
 import { isNil } from 'lodash-es';
-import { useLayoutType } from '@openmrs/esm-framework';
+import { NumericObservation, useLayoutType } from '@openmrs/esm-framework';
 import { useLastEncounter } from '../hooks';
 import type { EncounterTileColumn, EncounterTileProps } from '../types';
 import { withUnit, getConceptUnitsFromEncounter } from '../utils/concept-utils';
@@ -102,13 +102,12 @@ const EncounterData: React.FC<{
                   <span
                     style={{
                       display: 'inline-block',
-                      padding: '2px 10px',
+                      padding: '4px 8px',
                       borderRadius: '12px',
                       fontSize: '0.75rem',
                       fontWeight: 500,
                       backgroundColor: bgColor,
                       color: colorValue,
-                      whiteSpace: 'nowrap',
                     }}
                   >
                     {obsValue}

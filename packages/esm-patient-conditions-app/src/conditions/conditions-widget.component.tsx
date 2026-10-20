@@ -1,4 +1,4 @@
-import React, { type Dispatch, useCallback, useEffect, useRef, useState } from 'react';
+import React, { type Dispatch, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import classNames from 'classnames';
@@ -8,6 +8,7 @@ import {
   FormGroup,
   FormLabel,
   InlineLoading,
+  InlineNotification,
   Layer,
   RadioButton,
   RadioButtonGroup,
@@ -48,6 +49,8 @@ interface RequiredFieldLabelProps {
 }
 
 interface SearchResultsProps {
+  resultsRef: React.Ref<HTMLUListElement>;
+  onKeyDown: React.KeyboardEventHandler<HTMLUListElement>;
   isSearching: boolean;
   onConditionChange: (condition: CodedCondition) => void;
   searchResults: CodedCondition[];
@@ -73,9 +76,17 @@ const ConditionsWidget: React.FC<ConditionsWidgetProps> = ({
     formState: { errors },
     getValues,
     watch,
+    setValue,
   } = useFormContext<ConditionsFormSchema>();
   const session = useSession();
-  const searchInputRef = useRef(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const resultsRef = useRef<HTMLUListElement | null>(null);
+  const setResultsRef = useCallback((node: HTMLUListElement | null) => {
+    if (!node && resultsRef.current?.contains(document.activeElement)) {
+      searchInputRef.current?.focus();
+    }
+    resultsRef.current = node;
+  }, []);
   const clinicalStatus = watch('clinicalStatus');
   const matchingCondition = conditions?.find((condition) => condition?.id === conditionToEdit?.id);
 
@@ -87,12 +98,32 @@ const ConditionsWidget: React.FC<ConditionsWidgetProps> = ({
   const debouncedSearchTerm = useDebounce(searchTerm);
   const { searchResults, isSearching } = useConditionsSearch(debouncedSearchTerm);
 
-  const handleConditionChange = useCallback((selectedCondition: CodedCondition) => {
-    setSelectedCondition(selectedCondition);
-  }, []);
+  const duplicateCondition = useMemo(() => {
+    if (!selectedCondition || !conditions?.length) {
+      return null;
+    }
+    const uuid = selectedCondition.uuid;
+    return (
+      conditions.find((c) => c.conceptId === uuid && c.clinicalStatus.toLowerCase() === 'active') ??
+      conditions.find((c) => c.conceptId === uuid) ??
+      null
+    );
+  }, [selectedCondition, conditions]);
+
+  const isActiveDuplicate = duplicateCondition?.clinicalStatus.toLowerCase() === 'active';
+
+  const handleConditionChange = useCallback(
+    (selectedCondition: CodedCondition) => {
+      setSelectedCondition(selectedCondition);
+      setValue('conditionUuid', selectedCondition.uuid, { shouldValidate: true });
+      searchInputRef.current?.focus();
+    },
+    [setValue],
+  );
 
   const handleCreate = useCallback(async () => {
     if (!selectedCondition) {
+      setIsSubmittingForm(false);
       return;
     }
 
@@ -189,7 +220,7 @@ const ConditionsWidget: React.FC<ConditionsWidgetProps> = ({
   };
 
   useEffect(() => {
-    if (errors?.conditionName) {
+    if (errors?.conditionUuid) {
       focusOnSearchInput();
     }
     if (isSubmittingForm) {
@@ -220,44 +251,70 @@ const ConditionsWidget: React.FC<ConditionsWidgetProps> = ({
                 render={({ field: { onChange, value } }) => (
                   <ResponsiveWrapper>
                     <Search
+                      onKeyDown={(event) => {
+                        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                          const results = resultsRef.current?.querySelectorAll('button');
+                          if (results?.length) {
+                            event.preventDefault();
+                            results[event.key === 'ArrowDown' ? 0 : results.length - 1].focus();
+                          }
+                        }
+                      }}
                       autoFocus
                       className={classNames({
-                        [styles.conditionsError]: errors?.conditionName,
+                        [styles.conditionsError]: errors?.conditionUuid,
                       })}
                       disabled={isEditing}
                       id="conditionsSearch"
-                      aria-labelledby={errors?.conditionName ? 'conditionsSearchError' : undefined}
+                      aria-labelledby={errors?.conditionUuid ? 'conditionsSearchError' : undefined}
                       labelText={t('enterCondition', 'Enter condition')}
                       onChange={(event) => {
                         const val = event.target.value;
                         onChange(val);
+                        setSelectedCondition(null);
+                        setValue('conditionUuid', '');
                         handleSearchTermChange(val);
                       }}
                       onClear={() => {
                         setSearchTerm('');
                         setSelectedCondition(null);
+                        setValue('conditionUuid', '');
                       }}
                       placeholder={t('searchConditions', 'Search conditions')}
                       ref={searchInputRef}
-                      renderIcon={errors?.conditionName && ((props) => <WarningFilled fill="red" {...props} />)}
-                      value={(() => {
-                        if (selectedCondition) {
-                          return selectedCondition.display;
-                        }
-                        if (debouncedSearchTerm) {
-                          return value;
-                        }
-                      })()}
+                      renderIcon={errors?.conditionUuid && ((props) => <WarningFilled fill="red" {...props} />)}
+                      value={selectedCondition?.display ?? value ?? ''}
                     />
                   </ResponsiveWrapper>
                 )}
               />
-              {errors?.conditionName && (
+              {errors?.conditionUuid && (
                 <p id="conditionsSearchError" className={styles.errorMessage}>
-                  {errors.conditionName.message}
+                  {errors.conditionUuid.message}
                 </p>
               )}
               <SearchResults
+                resultsRef={setResultsRef}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    searchInputRef.current?.focus();
+                  } else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+                    const results = Array.from(event.currentTarget.querySelectorAll('button'));
+                    const index = results.findIndex((result) => result === document.activeElement);
+                    if (index < 0) {
+                      return;
+                    }
+                    event.preventDefault();
+                    const nextIndex =
+                      event.key === 'Home'
+                        ? 0
+                        : event.key === 'End'
+                          ? results.length - 1
+                          : (index + (event.key === 'ArrowDown' ? 1 : -1) + results.length) % results.length;
+                    results[nextIndex].focus();
+                  }
+                }}
                 isSearching={isSearching}
                 onConditionChange={handleConditionChange}
                 searchResults={searchResults}
@@ -265,6 +322,28 @@ const ConditionsWidget: React.FC<ConditionsWidgetProps> = ({
                 t={t}
                 value={searchTerm}
               />
+              {selectedCondition && duplicateCondition && (
+                <InlineNotification
+                  hideCloseButton
+                  kind="warning"
+                  lowContrast
+                  className={styles.duplicateWarning}
+                  title={t('possibleDuplicate', 'Possible duplicate')}
+                  subtitle={
+                    isActiveDuplicate
+                      ? t(
+                          'duplicateActiveConditionSubtitle',
+                          "{{conditionName}} is already on this patient's active problem list. Saving will create a duplicate.",
+                          { conditionName: selectedCondition.display, interpolation: { escapeValue: false } },
+                        )
+                      : t(
+                          'duplicateInactiveConditionSubtitle',
+                          '{{conditionName}} was previously recorded and is now inactive. Consider reactivating the existing record instead of creating a new one.',
+                          { conditionName: selectedCondition.display, interpolation: { escapeValue: false } },
+                        )
+                  }
+                />
+              )}
             </>
           )}
         </FormGroup>
@@ -354,6 +433,8 @@ function RequiredFieldLabel({ label, t }: RequiredFieldLabelProps) {
 }
 
 function SearchResults({
+  resultsRef,
+  onKeyDown,
   isSearching,
   onConditionChange,
   searchResults,
@@ -371,15 +452,17 @@ function SearchResults({
 
   if (!isSearching && searchResults?.length > 0) {
     return (
-      <ul className={styles.conditionsList}>
+      <ul
+        ref={resultsRef}
+        onKeyDown={onKeyDown}
+        className={styles.conditionsList}
+        aria-label={t('conditionSearchResults', 'Condition search results')}
+      >
         {searchResults?.map((searchResult) => (
-          <li
-            className={styles.condition}
-            key={searchResult?.uuid}
-            onClick={() => onConditionChange(searchResult)}
-            role="menuitem"
-          >
-            {searchResult.display}
+          <li className={styles.condition} key={searchResult?.uuid}>
+            <button type="button" className={styles.conditionButton} onClick={() => onConditionChange(searchResult)}>
+              {searchResult.display}
+            </button>
           </li>
         ))}
       </ul>

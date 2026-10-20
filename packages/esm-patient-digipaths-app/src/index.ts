@@ -9,25 +9,28 @@ import {
 import { createDashboardLink } from '@openmrs/esm-patient-common-lib';
 import { configSchema } from './config-schema';
 import digipathsOverviewComponent from './biometrics/digipaths-overview.component';
-import { registerExpressionHelper } from '@openmrs/esm-form-engine-lib';
 import {
   calcBpControl,
+  calcBpTarget,
   calcCDK_Risk,
   calcCVDRiskCategory,
   calcEGFR,
   calcEGFR_Stage,
   calcFootCare,
   calcHtnGrade,
+  calcPatientConditions,
   calcPhq9,
   calcPhq9Grade,
   calcSouthEastAsiaCVDRisk,
   calcSouthEastAsiaLabCVDRisk,
   calcSouthEastAsiaNonLabCVDRisk,
   calcSouthEastAsiaNonLabCVDRisk2,
+  calcSuicideRisk,
   calcTest,
   calcUACR_Category,
-  calcSuicideRisk,
 } from './customCalcResources/customCalculations';
+
+import { registerExpressionHelper } from '@openmrs/esm-form-engine-lib';
 
 const moduleName = '@openmrs/esm-patient-digipaths-app';
 
@@ -49,8 +52,6 @@ export function startupApp() {
     pattern: `.+${restBaseUrl}/concept.+`,
   });
 
-  defineConfigSchema(moduleName, configSchema);
-
   registerExpressionHelper('calcHtnGrade', calcHtnGrade);
   registerExpressionHelper('calcBpControl', calcBpControl);
   registerExpressionHelper('calcSouthEastAsiaNonLabCVDRisk2', calcSouthEastAsiaNonLabCVDRisk2);
@@ -67,6 +68,10 @@ export function startupApp() {
   registerExpressionHelper('calcSouthEastAsiaLabCVDRisk', calcSouthEastAsiaLabCVDRisk);
   registerExpressionHelper('calcSouthEastAsiaCVDRisk', calcSouthEastAsiaCVDRisk);
   registerExpressionHelper('calcSuicideRisk', calcSuicideRisk);
+  registerExpressionHelper('calcPatientConditions', calcPatientConditions);
+  registerExpressionHelper('calcBpTarget', calcBpTarget);
+
+  defineConfigSchema(moduleName, configSchema);
 }
 
 export const digipaths = getSyncLifecycle(digipathsOverviewComponent, options);

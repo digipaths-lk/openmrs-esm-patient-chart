@@ -1,6 +1,7 @@
 import React from 'react';
+import { vi, describe, it, expect, beforeEach, afterAll } from 'vitest';
 import userEvent from '@testing-library/user-event';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { getDefaultsFromConfigSchema, showSnackbar, useConfig } from '@openmrs/esm-framework';
 import { esmPatientChartSchema, type ChartConfig } from '../config-schema';
 import { mockPatient } from 'tools';
@@ -8,15 +9,15 @@ import { markPatientDeceased, useCausesOfDeath } from '../data.resource';
 import MarkPatientDeceasedForm from './mark-patient-deceased-form.workspace';
 import { type PatientWorkspace2DefinitionProps } from '@openmrs/esm-patient-common-lib/src';
 
-const mockMarkPatientDeceased = jest.mocked(markPatientDeceased);
-const mockUseCausesOfDeath = jest.mocked(useCausesOfDeath);
-const mockUseConfig = jest.mocked(useConfig<ChartConfig>);
-const mockShowSnackbar = jest.mocked(showSnackbar);
-const mockCloseWorkspace = jest.fn();
+const mockMarkPatientDeceased = vi.mocked(markPatientDeceased);
+const mockUseCausesOfDeath = vi.mocked(useCausesOfDeath);
+const mockUseConfig = vi.mocked(useConfig<ChartConfig>);
+const mockShowSnackbar = vi.mocked(showSnackbar);
+const mockCloseWorkspace = vi.fn();
 
-jest.mock('../data.resource', () => ({
-  markPatientDeceased: jest.fn().mockResolvedValue({}),
-  useCausesOfDeath: jest.fn(),
+vi.mock('../data.resource', () => ({
+  markPatientDeceased: vi.fn().mockResolvedValue({}),
+  useCausesOfDeath: vi.fn(),
 }));
 
 describe('MarkPatientDeceasedForm', () => {
@@ -25,7 +26,7 @@ describe('MarkPatientDeceasedForm', () => {
   const defaultProps: PatientWorkspace2DefinitionProps<{}, {}> = {
     closeWorkspace: mockCloseWorkspace,
     workspaceName: null,
-    launchChildWorkspace: jest.fn(),
+    launchChildWorkspace: vi.fn(),
     windowProps: {},
     workspaceProps: {},
     groupProps: {
@@ -76,7 +77,7 @@ describe('MarkPatientDeceasedForm', () => {
   });
 
   afterAll(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('renders the cause of death form', () => {
@@ -117,7 +118,7 @@ describe('MarkPatientDeceasedForm', () => {
   });
 
   it('selecting "Other" as the cause of death requires the user to enter a non-coded cause of death', async () => {
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     const user = userEvent.setup();
 
     render(<MarkPatientDeceasedForm {...defaultProps} />);
@@ -165,8 +166,35 @@ describe('MarkPatientDeceasedForm', () => {
     });
   });
 
+  it('accepts a death date on the day of birth in timezones ahead of UTC', async () => {
+    // Date-only strings like "1972-04-04" are parsed by `new Date()` as UTC midnight, which is after local midnight
+    // anywhere ahead of UTC. The suite runs in UTC, so switch zones to exercise that case.
+    const originalTz = process.env.TZ;
+    process.env.TZ = 'Africa/Nairobi';
+
+    try {
+      const user = userEvent.setup();
+
+      render(<MarkPatientDeceasedForm {...defaultProps} />);
+
+      await user.click(screen.getByRole('radio', { name: 'Traumatic injury' }));
+      fireEvent.change(screen.getByLabelText(/^date$/i), { target: { value: mockPatient.birthDate } });
+      await user.click(screen.getByRole('button', { name: /save and close/i }));
+
+      expect(screen.queryByText(/death date cannot be before the date of birth/i)).not.toBeInTheDocument();
+      expect(markPatientDeceased).toHaveBeenCalledWith(
+        new Date(1972, 3, 4),
+        mockPatient.id,
+        '8b64f45e-1d5f-4894-b77c-4e1d840e2c99',
+        '',
+      );
+    } finally {
+      process.env.TZ = originalTz;
+    }
+  });
+
   it('renders an error message when saving the cause of death fails', async () => {
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     const user = userEvent.setup();
     const mockError = new Error('API Error');
 
