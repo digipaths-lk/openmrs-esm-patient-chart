@@ -31,19 +31,19 @@ async function calcBpControl(age, systolic, diastolic, patientId) {
   switch (bptarget) {
     case conceptCodes['SBPlt130mmHgAndDBPlt80mmHg']:
       isControlSBP = sbp < 130;
-      isControlDBP = dbp < 80;
+      isControlDBP = dbp <= 80;
       break;
     case conceptCodes['SBPlt140mmHgAndDBPlt80mmHg']:
       isControlSBP = sbp < 140;
-      isControlDBP = dbp < 80;
+      isControlDBP = dbp <= 80;
       break;
     case conceptCodes['SBPlte130mmHgAndDBPlt80mmHg']:
       isControlSBP = sbp <= 130;
-      isControlDBP = dbp < 80;
+      isControlDBP = dbp <= 80;
       break;
     case conceptCodes['SBPlte140mmHgAndDBPlt80mmHg']:
       isControlSBP = sbp <= 140;
-      isControlDBP = dbp < 80;
+      isControlDBP = dbp <= 80;
       break;
     case conceptCodes['SBP130mmHgAndDBP80mmHg']:
       isControlSBP = sbp === 130;
