@@ -28,7 +28,7 @@ import {
   calcSuicideRisk,
   calcTest,
   calcUACR_Category,
-  customBMICal,
+  calcCustomBMI,
 } from './customCalcResources/customCalculations';
 
 import { registerExpressionHelper } from '@openmrs/esm-form-engine-lib';
@@ -71,7 +71,7 @@ export function startupApp() {
   registerExpressionHelper('calcSuicideRisk', calcSuicideRisk);
   registerExpressionHelper('calcPatientConditions', calcPatientConditions);
   registerExpressionHelper('calcBpTarget', calcBpTarget);
-  registerExpressionHelper('customBMICal', customBMICal);
+  registerExpressionHelper('calcCustomBMI', calcCustomBMI);
 
   defineConfigSchema(moduleName, configSchema);
 }

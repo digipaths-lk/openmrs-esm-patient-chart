@@ -638,7 +638,7 @@ const calcBpTarget = async (patientId: string, age: any) => {
   }
 };
 
-const customBMICal = async (heightPromise, weightPromise) => {
+const calcCustomBMI = async (heightPromise, weightPromise) => {
   const height = Number(await heightPromise);
   const weight = Number(await weightPromise);
 
@@ -668,5 +668,5 @@ export {
   calcSuicideRisk,
   calcDiabetesStatus,
   calcPatientConditions,
-  customBMICal,
+  calcCustomBMI,
 };
