@@ -638,6 +638,15 @@ const calcBpTarget = async (patientId: string, age: any) => {
   }
 };
 
+const calcCustomBMI = async (heightPromise, weightPromise) => {
+  const height = Number(await heightPromise);
+  const weight = Number(await weightPromise);
+
+  if (!height || !weight || height <= 0) return null;
+
+  return Math.round((weight / Math.pow(height / 100, 2)) * 10) / 10;
+};
+
 export {
   calcHtnGrade,
   calcBpControl,
@@ -659,4 +668,5 @@ export {
   calcSuicideRisk,
   calcDiabetesStatus,
   calcPatientConditions,
+  calcCustomBMI,
 };
