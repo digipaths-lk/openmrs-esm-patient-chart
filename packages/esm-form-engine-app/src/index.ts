@@ -20,6 +20,7 @@ import {
   calcSuicideRisk,
   calcTest,
   calcUACR_Category,
+  customBMICal,
 } from '@openmrs/esm-patient-digipaths-app/src/customCalcResources/customCalculations';
 const moduleName = '@openmrs/esm-form-engine-app';
 
@@ -81,6 +82,7 @@ export async function startupApp() {
   registerExpressionHelper('calcSouthEastAsiaCVDRisk', calcSouthEastAsiaCVDRisk);
   registerExpressionHelper('calcSuicideRisk', calcSuicideRisk);
   registerExpressionHelper('calcPatientConditions', calcPatientConditions);
+  registerExpressionHelper('customBMICal', customBMICal);
   registerExpressionHelper('calcBpTarget', calcBpTarget);
 }
 
