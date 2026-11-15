@@ -10,6 +10,17 @@ import { type LayoutMode } from './chart-review/dashboard-view.component';
 import styles from './patient-chart.scss';
 import { usePatientChartPatientAndVisit } from './patient-chart.resources';
 
+const HIDE_VITALS_HEADER_ON = [
+  'clinical-summary',
+  'common-assessment',
+  'ht-specific',
+  'dm-specific',
+  'cvd-specific',
+  'ckd-specific',
+  'phq9',
+  'depression-specific',
+];
+
 const PatientChart: React.FC = () => {
   const { patientUuid, view: encodedView } = useParams();
 
@@ -32,6 +43,7 @@ const WrappedPatientChart: React.FC<WrappedPatientChartProps> = ({ patientUuid, 
   const leftNavBasePath = useMemo(() => spaBasePath.replace(':patientUuid', patientUuid), [patientUuid]);
 
   useLeftNav({ name: 'patient-chart-dashboard-slot', basePath: leftNavBasePath });
+  const hideVitalsHeader = HIDE_VITALS_HEADER_ON.includes(view);
 
   return (
     <>
@@ -45,7 +57,9 @@ const WrappedPatientChart: React.FC<WrappedPatientChartProps> = ({ patientUuid, 
               <>
                 <aside>
                   <ExtensionSlot name="patient-header-slot" state={state} />
-                  <ExtensionSlot name="patient-info-slot" state={state} className={styles.patientInfoSlot} />
+                  {!hideVitalsHeader && (
+                    <ExtensionSlot name="patient-info-slot" state={state} className={styles.patientInfoSlot} />
+                  )}
                 </aside>
                 <div className={styles.grid}>
                   <div
